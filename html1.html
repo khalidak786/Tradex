@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Your existing head content remains the same -->
+    <style>
+        /* Your existing styles remain the same */
+    </style>
+</head>
+<body>
+    <!-- Your existing header, nav, and filter sections remain the same -->
+    
+    <!-- Table Section -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <!-- Your existing table headers -->
+                </tr>
+            </thead>
+            <tbody id="productsTableBody">
+                <tr>
+                    <td colspan="18" class="loading">Loading products...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Your existing footer -->
+    
+    <!-- Add Supabase client library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = '
+NEXT_PUBLIC_SUPABASE_URL=https://xuackwkjvjjdqjmisqlk.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWNrd2tqdmpqZHFqbWlzcWxrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDI5NjIsImV4cCI6MjA2NDM3ODk2Mn0.qt2VSui1WWWjmJRGbQeyqggYYIG2rYRKAO1ICHjxdzk
+            ';
+               const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        
+        // Function to fetch and display products
+        async function fetchProducts() {
+            try {
+                const { data: products, error } = await supabase
+                    .from('products')
+                    .select('*');
+                
+                const tableBody = document.getElementById('productsTableBody');
+                
+                if (error) throw error;
+                
+                if (!products || products.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="18">No products found</td></tr>';
+                    return;
+                }
+                
+                tableBody.innerHTML = '';
+                
+                products.forEach(product => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${product.major_group || ''}</td>
+                        <td>${product.quote_id || ''}</td>
+                        <td>${product.product_id || ''}</td>
+                        <td>${product.product_name || ''}</td>
+                        <td>${product.description || ''}</td>
+                        <td>${product.origin || ''}</td>
+                        <td>${product.quality_grade || ''}</td>
+                        <td>${product.quantity || ''}</td>
+                        <td>${product.price || ''}</td>
+                        <td>${(product.quantity * product.price).toFixed(2) || ''}</td>
+                        <td>${product.margin_required || ''}</td>
+                        <td>${product.packing || ''}</td>
+                        <td>${product.delivery_terms || ''}</td>
+                        <td>${product.payment_terms || ''}</td>
+                        <td>${product.general_tc || ''}</td>
+                        <td>${product.documents || ''}</td>
+                        <td>${product.remarks || ''}</td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching products:', error);
+                document.getElementById('productsTableBody').innerHTML = 
+                    '<tr><td colspan="18">Error loading products</td></tr>';
+            }
+        }
+        
+        // Real-time subscription
+        function subscribeToProducts() {
+            const subscription = supabase
+                .channel('products-changes')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'products'
+                    },
+                    () => fetchProducts() // Refresh when changes occur
+                )
+                .subscribe();
+            
+            return subscription;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchProducts();
+            subscribeToProducts();
+            
+            // Filter event listeners
+            document.getElementById('commodity').addEventListener('change', filterProducts);
+            document.getElementById('product').addEventListener('change', filterProducts);
+        });
+        
+        // Filter function
+        async function filterProducts() {
+            const commodity = document.getElementById('commodity').value;
+            const product = document.getElementById('product').value;
+            
+            try {
+                let query = supabase.from('products').select('*');
+                
+                if (commodity && commodity !== 'all') {
+                    query = query.eq('commodity', commodity);
+                }
+                
+                if (product && product !== 'all') {
+                    query = query.eq('product_type', product);
+                }
+                
+                const { data: products, error } = await query;
+                
+                if (error) throw error;
+                
+                const tableBody = document.getElementById('productsTableBody');
+                tableBody.innerHTML = '';
+                
+                products.forEach(product => {
+                    const row = document.createElement('tr');
+                    // Same row creation as in fetchProducts()
+                });
+                
+            } catch (error) {
+                console.error('Error filtering products:', error);
+            }
+        }
+    </script>
+</body>
+</html>
