@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tradex - Commodity Trading Platform</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        /* Header Styles */
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .contact-info {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .contact-info a {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        
+        .contact-info a:hover {
+            color: #f39c12;
+        }
+        
+        /* Navigation */
+        nav {
+            background-color: #34495e;
+            padding: 0.8rem 1rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 1.5rem;
+        }
+        
+        .nav-links a {
+            color: white;
+            font-weight: 500;
+            padding: 0.3rem 0;
+            position: relative;
+        }
+        
+        .nav-links a:hover {
+            color: #f39c12;
+        }
+        
+        /* Filter Section */
+        .filter-section {
+            background-color: white;
+            padding: 1rem;
+            margin: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .filter-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+        
+        .filter-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        
+        select {
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        
+        /* Table Section */
+        .table-container {
+            margin: 1rem;
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            font-size: 0.9rem;
+        }
+        
+        th {
+            background-color: #2c3e50;
+            color: white;
+            font-weight: 500;
+        }
+        
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        /* Footer */
+        footer {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1.5rem 1rem;
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .footer-logo {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .footer-contact {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .footer-contact a {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        
+        .footer-contact a:hover {
+            color: #f39c12;
+        }
+        
+        /* Mobile Responsive Adjustments */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .contact-info {
+                width: 100%;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .filter-form {
+                grid-template-columns: 1fr;
+            }
+            
+            footer {
+                grid-template-columns: 1fr;
+            }
+            
+            table {
+                display: block;
+                width: 100%;
+                overflow-x: scroll;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .nav-links {
+                gap: 1rem;
+                justify-content: space-between;
+            }
+            
+            th, td {
+                padding: 0.5rem;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="logo">Tradex</div>
+        <div class="contact-info">
+            <a href="https://wa.me/971509987072" target="_blank">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-6.29 3.617c-.545 0-1.06-.113-1.53-.339l-.13-.065-1.377.365.365-1.341-.078-.13a3.76 3.76 0 0 1-.36-1.717c0-2.072 1.695-3.757 3.77-3.757a3.76 3.76 0 0 1 2.774 1.23 3.699 3.699 0 0 1 1.004 2.527 3.766 3.766 0 0 1-3.768 3.756zm7.65-12.832a10.45 10.45 0 0 0-7.47-3.087c-5.8 0-10.5 4.7-10.5 10.5a10.43 10.43 0 0 0 1.384 5.234l-.736 2.7 2.772-.73a10.45 10.45 0 0 0 5.08 1.313c5.8 0 10.5-4.7 10.5-10.5 0-2.81-1.11-5.35-2.92-7.23z"/>
+                </svg>
+                +971 50 998 7072
+            </a>
+            <a href="mailto:bd@igapglobal.com">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                </svg>
+                bd@igapglobal.com
+            </a>
+        </div>
+    </header>
+    
+    <!-- Navigation -->
+    <nav>
+        <ul class="nav-links">
+            <li><a href="#about">About Us</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+        </ul>
+    </nav>
+    
+    <!-- Filter Section -->
+    <section class="filter-section">
+        <h2 class="filter-title">Product Filter</h2>
+        <form class="filter-form">
+            <div class="filter-group">
+                <label for="commodity">Commodity</label>
+                <select id="commodity" name="commodity">
+                    <option value="" disabled selected>Steel</option>
+                    <option value="steel">Steel</option>
+                    <option value="aluminum">Aluminum</option>
+                    <option value="copper">Copper</option>
+                    <option value="iron">Iron</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="product">Product</label>
+                <select id="product" name="product">
+                    <option value="" disabled selected>Angle</option>
+                    <option value="angle">Angle</option>
+                    <option value="beam">Beam</option>
+                    <option value="coil">Coil</option>
+                    <option value="plate">Plate</option>
+                </select>
+            </div>
+        </form>
+    </section>
+    
+    <!-- Table Section -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Major Group</th>
+                    <th>QuoteID</th>
+                    <th>ProductID</th>
+                    <th>Product Name</th>
+                    <th>Description</th>
+                    <th>Origin</th>
+                    <th>Quality/Grade</th>
+                    <th>Quantity (MT)</th>
+                    <th>Price (USD/MT)</th>
+                    <th>Total Price (USD)</th>
+                    <th>Margin Required (%)</th>
+                    <th>Packing</th>
+                    <th>Delivery Terms</th>
+                    <th>Payment Terms</th>
+                    <th>General T&C</th>
+                    <th>Documents</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Steel Products</td>
+                    <td>Q-2023-001</td>
+                    <td>SP-001</td>
+                    <td>Steel Angle</td>
+                    <td>50x50x5mm</td>
+                    <td>UAE</td>
+                    <td>ASTM A36</td>
+                    <td>500</td>
+                    <td>650</td>
+                    <td>325,000</td>
+                    <td>10</td>
+                    <td>Bundled</td>
+                    <td>FOB Jebel Ali</td>
+                    <td>LC at sight</td>
+                    <td>Standard</td>
+                    <td>COA, MTC</td>
+                    <td>Ready stock</td>
+                </tr>
+                <tr>
+                    <td>Steel Products</td>
+                    <td>Q-2023-002</td>
+                    <td>SP-002</td>
+                    <td>Steel Angle</td>
+                    <td>40x40x4mm</td>
+                    <td>Turkey</td>
+                    <td>EN 10025</td>
+                    <td>300</td>
+                    <td>620</td>
+                    <td>186,000</td>
+                    <td>15</td>
+                    <td>Bundled</td>
+                    <td>CFR Dubai</td>
+                    <td>30% Advance</td>
+                    <td>Standard</td>
+                    <td>COA, MTC</td>
+                    <td>4 weeks delivery</td>
+                </tr>
+                <tr>
+                    <td>Steel Products</td>
+                    <td>Q-2023-003</td>
+                    <td>SP-003</td>
+                    <td>Steel Angle</td>
+                    <td>60x60x6mm</td>
+                    <td>China</td>
+                    <td>GB/T 700</td>
+                    <td>1000</td>
+                    <td>580</td>
+                    <td>580,000</td>
+                    <td>20</td>
+                    <td>Bundled</td>
+                    <td>CIF Sharjah</td>
+                    <td>TT in advance</td>
+                    <td>Standard</td>
+                    <td>COA, MTC</td>
+                    <td>6 weeks delivery</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="footer-logo">Tradex</div>
+        <div class="footer-contact">
+            <a href="https://wa.me/971509987072" target="_blank">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-6.29 3.617c-.545 0-1.06-.113-1.53-.339l-.13-.065-1.377.365.365-1.341-.078-.13a3.76 3.76 0 0 1-.36-1.717c0-2.072 1.695-3.757 3.77-3.757a3.76 3.76 0 0 1 2.774 1.23 3.699 3.699 0 0 1 1.004 2.527 3.766 3.766 0 0 1-3.768 3.756zm7.65-12.832a10.45 10.45 0 0 0-7.47-3.087c-5.8 0-10.5 4.7-10.5 10.5a10.43 10.43 0 0 0 1.384 5.234l-.736 2.7 2.772-.73a10.45 10.45 0 0 0 5.08 1.313c5.8 0 10.5-4.7 10.5-10.5 0-2.81-1.11-5.35-2.92-7.23z"/>
+                </svg>
+                +971 50 998 7072
+            </a>
+            <a href="mailto:bd@igapglobal.com">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                </svg>
+                bd@igapglobal.com
+            </a>
+        </div>
+    </footer>
+</body>
+</html>
