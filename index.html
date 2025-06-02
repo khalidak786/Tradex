@@ -190,8 +190,17 @@
             }
         }
 
+        /* Styles for clickable rows */
+        .product-row {
+            transition: background-color 0.2s;
+        }
+        
         /* Mobile and touch device styles */
         @media (hover: none) or (pointer: coarse) {
+            .product-row:active {
+                background-color: rgba(44, 62, 80, 0.1);
+            }
+
             [data-tooltip].tooltip-active::after {
                 content: attr(data-tooltip);
                 position: fixed;
@@ -690,13 +699,24 @@
                     </tr>
                 `).join('');
 
-                // Add click handlers to rows
+                // Add click and touch handlers to rows
                 const rows = tableBody.querySelectorAll('.product-row');
                 rows.forEach(row => {
-                    row.addEventListener('click', () => {
+                    // Handler function for both click and touch
+                    const handleRowInteraction = (e) => {
+                        // Prevent the default behavior (important for touch)
+                        e.preventDefault();
+                        // If this was triggered by a tooltip element, don't navigate
+                        if (e.target.closest('[data-tooltip]')) {
+                            return;
+                        }
                         const productId = row.dataset.productId;
                         window.open(`product-details.html?id=${productId}`, '_blank');
-                    });
+                    };
+
+                    // Add both click and touch handlers
+                    row.addEventListener('click', handleRowInteraction);
+                    row.addEventListener('touchend', handleRowInteraction);
                 });
 
             } catch (error) {
