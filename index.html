@@ -88,6 +88,9 @@
             margin: 1rem;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
         
         .filter-title {
@@ -143,18 +146,40 @@
         .table-container {
             margin: 1rem;
             overflow-x: auto;
+            max-height: calc(100vh - 300px); /* Adjust based on your header/filter height */
+            overflow-y: auto;
         }
         
         table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate; /* Changed from collapse to allow sticky header */
+            border-spacing: 0;
             background-color: white;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             border-radius: 8px;
             overflow: hidden;
         }
         
-        th, td {
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        th {
+            background-color: white; /* Ensure header has background */
+            position: sticky;
+            top: 0;
+            padding: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            font-size: 1.1rem;
+            max-width: 200px;
+        }
+        
+        td {
             padding: 0.8rem;
             text-align: left;
             border-bottom: 1px solid #ddd;
