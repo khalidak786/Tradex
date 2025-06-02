@@ -704,14 +704,46 @@
                 // Add click and touch handlers to rows
                 const rows = tableBody.querySelectorAll('.product-row');
                 rows.forEach(row => {
+                    let touchStartX = 0;
+                    let touchStartY = 0;
+                    let isSwiping = false;
+
+                    // Touch start handler to record initial position
+                    row.addEventListener('touchstart', (e) => {
+                        touchStartX = e.touches[0].clientX;
+                        touchStartY = e.touches[0].clientY;
+                        isSwiping = false;
+                    });
+
+                    // Touch move handler to detect scrolling
+                    row.addEventListener('touchmove', (e) => {
+                        if (!isSwiping) {
+                            const touchEndX = e.touches[0].clientX;
+                            const touchEndY = e.touches[0].clientY;
+                            const deltaX = Math.abs(touchEndX - touchStartX);
+                            const deltaY = Math.abs(touchEndY - touchStartY);
+                            
+                            // If the user has moved more than 5px in any direction, consider it a scroll
+                            if (deltaX > 5 || deltaY > 5) {
+                                isSwiping = true;
+                            }
+                        }
+                    });
+
                     // Handler function for both click and touch
                     const handleRowInteraction = (e) => {
-                        // Prevent the default behavior (important for touch)
-                        e.preventDefault();
+                        // If this is a touch event and we detected swiping, don't navigate
+                        if (e.type === 'touchend' && isSwiping) {
+                            return;
+                        }
+
                         // If this was triggered by a tooltip element, don't navigate
                         if (e.target.closest('[data-tooltip]')) {
                             return;
                         }
+
+                        // Prevent default only for intentional taps/clicks
+                        e.preventDefault();
                         const productId = row.dataset.productId;
                         window.open(`product-details.html?id=${productId}`, '_blank');
                     };
