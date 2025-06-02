@@ -168,34 +168,59 @@
             display: inline-block;
         }
 
-        [data-tooltip]:hover::after {
-            content: attr(data-tooltip);
-            position: fixed;
-            transform: translateY(-100%);
-            margin-top: -5px;
-            background-color: rgba(44, 62, 80, 0.95);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            max-width: 300px;
-            white-space: normal;
-            word-wrap: break-word;
-            z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            pointer-events: none;
-            transition: opacity 0.2s ease-in-out;
+        /* Desktop hover styles */
+        @media (hover: hover) {
+            [data-tooltip]:hover::after {
+                content: attr(data-tooltip);
+                position: fixed;
+                transform: translateY(-100%);
+                margin-top: -5px;
+                background-color: rgba(44, 62, 80, 0.95);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-size: 0.85rem;
+                max-width: 300px;
+                white-space: normal;
+                word-wrap: break-word;
+                z-index: 1000;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                pointer-events: none;
+                transition: opacity 0.2s ease-in-out;
+            }
         }
 
-        /* Ensure tooltip stays visible when hovering over it */
-        [data-tooltip]:hover::after {
-            opacity: 1;
-            visibility: visible;
-        }
+        /* Mobile and touch device styles */
+        @media (hover: none) or (pointer: coarse) {
+            [data-tooltip].tooltip-active::after {
+                content: attr(data-tooltip);
+                position: fixed;
+                left: 50%;
+                bottom: 20px;
+                transform: translateX(-50%);
+                background-color: rgba(44, 62, 80, 0.95);
+                color: white;
+                padding: 12px 16px;
+                border-radius: 4px;
+                font-size: 0.9rem;
+                width: 90%;
+                max-width: 300px;
+                white-space: normal;
+                word-wrap: break-word;
+                z-index: 1000;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                text-align: center;
+            }
 
-        /* Make truncated cells more obvious */
-        .truncate:hover {
-            background-color: #f8f9fa;
+            .truncate {
+                position: relative;
+                cursor: pointer;
+                -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+            }
+
+            .truncate:active {
+                background-color: rgba(0,0,0,0.05);
+            }
         }
 
         /* Rest of your existing CSS... */
@@ -674,6 +699,68 @@
                 `;
             }
         }
+
+        function truncateText(text, maxLength = 20) {
+            if (text.length <= maxLength) return text;
+            return `<span class="truncate" data-tooltip="${text.replace(/"/g, '&quot;')}">${text.substring(0, maxLength)}...</span>`;
+        }
+
+        // Update display function to include truncation
+        function displayProducts(products) {
+            const productList = document.getElementById('productList');
+            const productTable = products.map(product => `
+                <tr>
+                    <td>${product.product_id}</td>
+                    <td>${truncateText(product.name)}</td>
+                    <td>${truncateText(product.description)}</td>
+                    <td>${product.price}</td>
+                    <td>${product.updated_at}</td>
+                </tr>
+            `).join('');
+            
+            productList.innerHTML = productTable;
+        }
+
+        // Handle mobile tooltip functionality
+        function setupMobileTooltips() {
+            let activeTooltip = null;
+            const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+            if (!isTouchDevice) return;
+
+            // Hide tooltip when clicking outside
+            document.addEventListener('click', (e) => {
+                if (activeTooltip && !e.target.closest('[data-tooltip]')) {
+                    activeTooltip.classList.remove('tooltip-active');
+                    activeTooltip = null;
+                }
+            });
+
+            // Handle tooltip clicks
+            document.addEventListener('click', (e) => {
+                const tooltipElement = e.target.closest('[data-tooltip]');
+                if (!tooltipElement) return;
+
+                e.preventDefault();
+
+                if (activeTooltip === tooltipElement) {
+                    tooltipElement.classList.remove('tooltip-active');
+                    activeTooltip = null;
+                } else {
+                    if (activeTooltip) {
+                        activeTooltip.classList.remove('tooltip-active');
+                    }
+                    tooltipElement.classList.add('tooltip-active');
+                    activeTooltip = tooltipElement;
+                }
+            });
+        }
+
+        // Initialize tooltips when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            setupMobileTooltips();
+            // ... rest of your initialization code ...
+        });
     </script>
 </body>
 </html>
