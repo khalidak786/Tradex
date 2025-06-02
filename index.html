@@ -5,21 +5,417 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tradex - Commodity Trading Platform</title>
     <style>
-        /* [All previous CSS remains exactly the same] */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .contact-info {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .contact-info a {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        
+        .contact-info a:hover {
+            color: #f39c12;
+        }
+        
+        nav {
+            background-color: #34495e;
+            padding: 0.8rem 1rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 1.5rem;
+        }
+        
+        .nav-links a {
+            color: white;
+            font-weight: 500;
+            padding: 0.3rem 0;
+            position: relative;
+        }
+        
+        .nav-links a:hover {
+            color: #f39c12;
+        }
+        
+        .filter-section {
+            background-color: white;
+            padding: 1rem;
+            margin: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .filter-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+        
+        .filter-form {
+            display: flex;
+            align-items: flex-end;
+            gap: 1rem;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        
+        label {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        
+        select {
+            padding: 0.6rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            width: 100%;
+        }
+
+        .filter-button {
+            padding: 0.6rem 1rem;
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            white-space: nowrap;
+            height: 38px;
+        }
+
+        .filter-button:hover {
+            background-color: #34495e;
+        }
+        
+        .table-container {
+            margin: 1rem;
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            font-size: 0.9rem;
+            max-width: 200px; /* Limit cell width */
+        }
+
+        /* Add styles for truncated text cells */
+        .truncate {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+            cursor: help;
+        }
+
+        /* Custom tooltip styles */
+        [data-tooltip] {
+            position: relative;
+            display: inline-block;
+        }
+
+        [data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: fixed;
+            transform: translateY(-100%);
+            margin-top: -5px;
+            background-color: rgba(44, 62, 80, 0.95);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            max-width: 300px;
+            white-space: normal;
+            word-wrap: break-word;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            pointer-events: none;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        /* Ensure tooltip stays visible when hovering over it */
+        [data-tooltip]:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Make truncated cells more obvious */
+        .truncate:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Rest of your existing CSS... */
+        
+        footer {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1.5rem 1rem;
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .footer-logo {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .footer-contact {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .footer-contact a {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        
+        .footer-contact a:hover {
+            color: #f39c12;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 1rem;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 1rem;
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .contact-info {
+                width: 100%;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        
+            .filter-form {
+                grid-template-columns: 1fr;
+            }
+            
+            footer {
+                grid-template-columns: 1fr;
+            }
+            
+            table {
+                display: block;
+                width: 100%;
+                overflow-x: scroll;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .nav-links {
+                gap: 1rem;
+                justify-content: space-between;
+            }
+            
+            th, td {
+                padding: 0.5rem;
+                font-size: 0.8rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <!-- [All previous HTML content remains exactly the same until the scripts] -->
+    <header>
+        <div class="logo">Tradex</div>
+        <div class="contact-info">
+            <a href="https://wa.me/971509987072" target="_blank">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-6.29 3.617c-.545 0-1.06-.113-1.53-.339l-.13-.065-1.377.365.365-1.341-.078-.13a3.76 3.76 0 0 1-.36-1.717c0-2.072 1.695-3.757 3.77-3.757a3.76 3.76 0 0 1 2.774 1.23 3.699 3.699 0 0 1 1.004 2.527 3.766 3.766 0 0 1-3.768 3.756zm7.65-12.832a10.45 10.45 0 0 0-7.47-3.087c-5.8 0-10.5 4.7-10.5 10.5a10.43 10.43 0 0 0 1.384 5.234l-.736 2.7 2.772-.73a10.45 10.45 0 0 0 5.08 1.313c5.8 0 10.5-4.7 10.5-10.5 0-2.81-1.11-5.35-2.92-7.23z"/>
+                </svg>
+                +971 50 998 7072
+            </a>
+            <a href="mailto:bd@igapglobal.com">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                </svg>
+                bd@igapglobal.com
+            </a>
+        </div>
+    </header>
+    
+    <nav>
+        <ul class="nav-links">
+            <li><a href="#about">About Us</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+        </ul>
+    </nav>
+    
+    <section class="filter-section">
+        <h2 class="filter-title">Product Filter</h2>
+        <form class="filter-form">
+            <div class="filter-group">
+                <label for="commodity">Commodity</label>
+                <select id="commodity" name="commodity">
+                    <option value="all">All Commodities</option>
+                    <option value="Steel">Steel</option>
+                    <option value="Aluminum">Aluminum</option>
+                    <option value="Copper">Copper</option>
+                    <option value="Iron">Iron</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="product">Product</label>
+                <select id="product" name="product">
+                    <option value="all">All Products</option>
+                    <option value="Angle">Angle</option>
+                    <option value="Beam">Beam</option>
+                    <option value="Coil">Coil</option>
+                    <option value="Plate">Plate</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <button type="button" id="applyFilter" class="filter-button">Apply Filter</button>
+            </div>
+        </form>
+    </section>
+    
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Major Group</th>
+                    <th>QuoteID</th>
+                    <th>ProductID</th>
+                    <th>Product Name</th>
+                    <th>Description</th>
+                    <th>Origin</th>
+                    <th>Quality/Grade</th>
+                    <th>Quantity (MT)</th>
+                    <th>Price (USD/MT)</th>
+                    <th>Total Price (USD)</th>
+                    <th>Margin Required (%)</th>
+                    <th>Packing</th>
+                    <th>Delivery Terms</th>
+                    <th>Payment Terms</th>
+                    <th>General T&C</th>
+                    <th>Documents</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+            <tbody id="productsTableBody">
+                <tr>
+                    <td colspan="17" class="loading">Loading products...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <footer>
+        <div class="footer-logo">Tradex</div>
+        <div class="footer-contact">
+            <a href="https://wa.me/971509987072" target="_blank">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-6.29 3.617c-.545 0-1.06-.113-1.53-.339l-.13-.065-1.377.365.365-1.341-.078-.13a3.76 3.76 0 0 1-.36-1.717c0-2.072 1.695-3.757 3.77-3.757a3.76 3.76 0 0 1 2.774 1.23 3.699 3.699 0 0 1 1.004 2.527 3.766 3.766 0 0 1-3.768 3.756zm7.65-12.832a10.45 10.45 0 0 0-7.47-3.087c-5.8 0-10.5 4.7-10.5 10.5a10.43 10.43 0 0 0 1.384 5.234l-.736 2.7 2.772-.73a10.45 10.45 0 0 0 5.08 1.313c5.8 0 10.5-4.7 10.5-10.5 0-2.81-1.11-5.35-2.92-7.23z"/>
+                </svg>
+                +971 50 998 7072
+            </a>
+            <a href="mailto:bd@igapglobal.com">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                </svg>
+                bd@igapglobal.com
+            </a>
+        </div>
+    </footer>
 
-    <!-- Load Supabase JS FIRST -->
+    <!-- Load Supabase JS first -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- Then initialize your app -->
+    <!-- Then your app code -->
     <script>
         // Immediately initialize Supabase when script loads
-        document.supabase = supabase.createClient(
+        const { createClient } = supabase;
+        const supabaseClient = createClient(
             'https://xuackwkjvjjdqjmisqlk.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWNrd2tqdmpqZHFqbWlzcWxrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDI5NjIsImV4cCI6MjA2NDM3ODk2Mn0.qt2VSui1WWWjmJRGbQeyqggYYIG2rYRKAO1ICHjxdzk'
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWNrd2tqdmpqZHFqbWlzcWxrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDI5NjIsImV4cCI6MjA2NDM3ODk2Mn0.qt2VSui1WWWjmJRGbQeyqggYYIG2rYRKAO1ICHjxdzk',
+            {
+                auth: {
+                    persistSession: true
+                },
+                realtime: {
+                    params: {
+                        eventsPerSecond: 2
+                    },
+                    timeout: 60000,
+                    heartbeat: {
+                        interval: 30000,
+                        maxDelay: 120000
+                    }
+                }
+            }
         );
 
         // Wait for DOM to be ready
@@ -28,84 +424,244 @@
             initializeApp();
         });
 
+        async function updateFilterOptions(selectedCommodity = 'all', selectedProduct = 'all') {
+            try {
+                const { data: products, error } = await supabaseClient
+                    .from('products')
+                    .select('major_group, product_name');
+
+                if (error) throw error;
+
+                // Update commodity dropdown first
+                const commoditySelect = document.getElementById('commodity');
+                const uniqueCommodities = [...new Set(products.map(p => p.major_group))].filter(Boolean).sort();
+                
+                // Clear existing options except "All Commodities"
+                commoditySelect.innerHTML = '<option value="all">All Commodities</option>';
+                
+                // Add all available commodities
+                uniqueCommodities.forEach(commodity => {
+                    const option = document.createElement('option');
+                    option.value = commodity;
+                    option.textContent = commodity;
+                    option.selected = commodity === selectedCommodity;
+                    commoditySelect.appendChild(option);
+                });
+
+                // Update product dropdown based on selected commodity
+                const productSelect = document.getElementById('product');
+                let filteredProducts;
+                
+                if (selectedCommodity === 'all') {
+                    // If no commodity is selected, show all products
+                    filteredProducts = products;
+                } else {
+                    // Filter products based on selected commodity
+                    filteredProducts = products.filter(p => p.major_group === selectedCommodity);
+                }
+
+                const uniqueProducts = [...new Set(filteredProducts.map(p => p.product_name))].filter(Boolean).sort();
+                
+                // Clear existing options
+                productSelect.innerHTML = '<option value="all">All Products</option>';
+                
+                // Add filtered products
+                uniqueProducts.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product;
+                    option.textContent = product;
+                    option.selected = product === selectedProduct;
+                    productSelect.appendChild(option);
+                });
+
+            } catch (error) {
+                console.error('Failed to update filter options:', error);
+            }
+        }
+
         function initializeApp() {
-            // Verify Supabase is initialized
-            if (!document.supabase) {
-                console.error("Supabase not initialized!");
-                showError("System configuration error");
-                return;
+            // Update filter options with actual database values
+            updateFilterOptions();
+            
+            // Set up filter button click handler
+            document.getElementById('applyFilter').addEventListener('click', fetchProducts);
+
+            // Set up filter change handlers for interdependent dropdowns
+            document.getElementById('commodity').addEventListener('change', (e) => {
+                const productSelect = document.getElementById('product');
+                // Reset product selection when commodity changes
+                productSelect.value = 'all';
+                updateFilterOptions(e.target.value, 'all');
+                // Automatically apply filter when commodity changes
+                fetchProducts();
+            });
+            
+            document.getElementById('product').addEventListener('change', (e) => {
+                updateFilterOptions(document.getElementById('commodity').value, e.target.value);
+                // Automatically apply filter when product changes
+                fetchProducts();
+            });
+
+            // Initial data load with no filters
+            fetchProducts(true);
+
+            // Set up polling for updates
+            setupPolling();
+        }
+
+        let pollingInterval;
+        let lastDataHash;
+
+        // Helper function to create a hash of the data for comparison
+        function calculateDataHash(products) {
+            return JSON.stringify(products.map(p => ({
+                id: p.product_id,
+                updated_at: p.updated_at
+            })));
+        }
+
+        function setupPolling() {
+            // Clear any existing polling
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
             }
 
-            // Set up filters
-            document.getElementById('commodity').addEventListener('change', fetchProducts);
-            document.getElementById('product').addEventListener('change', fetchProducts);
+            // Poll every 5 seconds, but only update UI if data changed
+            pollingInterval = setInterval(async () => {
+                try {
+                    console.log('Checking for updates...');
+                    
+                    // Get current filter values
+                    const commodity = document.getElementById('commodity').value;
+                    const product = document.getElementById('product').value;
+                    
+                    // Build query with current filters
+                    let query = supabaseClient.from('products').select('product_id,updated_at');
+                    
+                    if (commodity !== 'all') {
+                        query = query.eq('major_group', commodity);
+                    }
+                    if (product !== 'all') {
+                        query = query.eq('product_name', product);
+                    }
 
-            // Initial data load
-            fetchProducts();
+                    // Get just the IDs and update timestamps
+                    const { data: products, error } = await query;
+                    
+                    if (error) throw error;
+                    
+                    // Calculate hash of current data state
+                    const currentHash = calculateDataHash(products);
+                    
+                    // Only update if data has changed
+                    if (currentHash !== lastDataHash) {
+                        console.log('Data changed, updating display...');
+                        lastDataHash = currentHash;
+                        fetchProducts();
+                    } else {
+                        console.log('No changes detected');
+                    }
+                } catch (error) {
+                    console.error('Error checking for updates:', error);
+                }
+            }, 5000);
 
-            // Set up realtime
-            const channel = document.supabase
-                .channel('products')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
-                    console.log("Realtime update received");
+            // Stop polling when the page is not visible
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    console.log('Page hidden, pausing updates');
+                    clearInterval(pollingInterval);
+                } else {
+                    console.log('Page visible, resuming updates');
+                    setupPolling();
+                    // Immediate check for updates when becoming visible
                     fetchProducts();
-                })
-                .subscribe();
-
-            // Cleanup on page unload
-            window.addEventListener('beforeunload', () => {
-                document.supabase.removeChannel(channel);
+                }
             });
         }
 
-        async function fetchProducts() {
+        // Cleanup handler for polling interval
+        window.addEventListener('beforeunload', () => {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+        });
+
+        // Update fetchProducts to save the initial hash
+        async function fetchProducts(isInitialLoad = false) {
             const tableBody = document.getElementById('productsTableBody');
             try {
-                // Show loading state
-                tableBody.innerHTML = '<tr><td colspan="17" class="loading">Loading products...</td></tr>';
+                // Show loading state only on initial load or manual refresh
+                if (isInitialLoad) {
+                    tableBody.innerHTML = '<tr><td colspan="17" class="loading">Loading products...</td></tr>';
+                }
 
-                // Build query
-                let query = document.supabase
-                    .from('products')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
-                // Apply filters
+                // Get filter values
                 const commodity = document.getElementById('commodity').value;
                 const product = document.getElementById('product').value;
 
-                if (commodity !== 'all') query = query.eq('commodity', commodity);
-                if (product !== 'all') query = query.eq('product_type', product);
+                // Build the query based on filters
+                let query = supabaseClient
+                    .from('products')
+                    .select('*');
+
+                if (commodity !== 'all') {
+                    query = query.eq('major_group', commodity);
+                }
+                
+                if (product !== 'all') {
+                    query = query.eq('product_name', product);
+                }
 
                 // Execute query
                 const { data: products, error } = await query;
 
                 if (error) throw error;
+                
+                // Update the hash after successful fetch
+                lastDataHash = calculateDataHash(products);
+
                 if (!products || products.length === 0) {
                     tableBody.innerHTML = '<tr><td colspan="17">No products found</td></tr>';
                     return;
                 }
 
+                // Helper function to truncate and create tooltip
+                function formatCell(content, maxLength = 20) {
+                    if (!content || content === '-') return '<td>-</td>';
+                    const text = String(content);
+                    if (text.length <= maxLength) {
+                        return `<td>${text}</td>`;
+                    }
+                    return `<td class="truncate" data-tooltip="${text.replace(/"/g, '&quot;')}">${text.substring(0, maxLength)}...</td>`;
+                }
+
+                // Helper function to format numbers without truncation
+                function formatNumber(value) {
+                    if (!value || value === '-') return '<td>-</td>';
+                    return `<td>${value.toLocaleString()}</td>`;
+                }
+
                 // Render products
                 tableBody.innerHTML = products.map(product => `
                     <tr>
-                        <td>${product.major_group || '-'}</td>
-                        <td>${product.quote_id || '-'}</td>
-                        <td>${product.product_id || '-'}</td>
-                        <td>${product.product_name || '-'}</td>
-                        <td>${product.description || '-'}</td>
-                        <td>${product.origin || '-'}</td>
-                        <td>${product.quality_grade || '-'}</td>
-                        <td>${product.quantity || '-'}</td>
-                        <td>${product.price ? product.price.toLocaleString() : '-'}</td>
-                        <td>${product.quantity && product.price ? (product.quantity * product.price).toLocaleString() : '-'}</td>
-                        <td>${product.margin_required || '-'}</td>
-                        <td>${product.packing || '-'}</td>
-                        <td>${product.delivery_terms || '-'}</td>
-                        <td>${product.payment_terms || '-'}</td>
-                        <td>${product.general_tc || '-'}</td>
-                        <td>${product.documents || '-'}</td>
-                        <td>${product.remarks || '-'}</td>
+                        ${formatCell(product.major_group)}
+                        ${formatCell(product.quote_id)}
+                        ${formatCell(product.product_id)}
+                        ${formatCell(product.product_name)}
+                        ${formatCell(product.description, 20)}
+                        ${formatCell(product.origin)}
+                        ${formatCell(product.quality_grade)}
+                        ${formatNumber(product.quantity)}
+                        ${formatNumber(product.price)}
+                        ${formatNumber(product.quantity && product.price ? (product.quantity * product.price) : null)}
+                        ${formatCell(product.margin_required)}
+                        ${formatCell(product.packing)}
+                        ${formatCell(product.delivery_terms)}
+                        ${formatCell(product.payment_terms)}
+                        ${formatCell(product.general_tc)}
+                        ${formatCell(product.documents)}
+                        ${formatCell(product.remarks)}
                     </tr>
                 `).join('');
 
@@ -117,13 +673,6 @@
                     </td></tr>
                 `;
             }
-        }
-
-        function showError(message) {
-            const tableBody = document.getElementById('productsTableBody');
-            tableBody.innerHTML = `
-                <tr><td colspan="17" class="error">${message}</td></tr>
-            `;
         }
     </script>
 </body>
