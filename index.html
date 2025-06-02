@@ -669,7 +669,7 @@
 
                 // Render products
                 tableBody.innerHTML = products.map(product => `
-                    <tr>
+                    <tr class="product-row" data-product-id="${product.product_id}" style="cursor: pointer;">
                         ${formatCell(product.major_group)}
                         ${formatCell(product.quote_id)}
                         ${formatCell(product.product_id)}
@@ -689,6 +689,15 @@
                         ${formatCell(product.remarks)}
                     </tr>
                 `).join('');
+
+                // Add click handlers to rows
+                const rows = tableBody.querySelectorAll('.product-row');
+                rows.forEach(row => {
+                    row.addEventListener('click', () => {
+                        const productId = row.dataset.productId;
+                        window.open(`product-details.html?id=${productId}`, '_blank');
+                    });
+                });
 
             } catch (error) {
                 console.error("Failed to load products:", error);
