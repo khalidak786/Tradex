@@ -5,17 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tradex - Commodity Trading Platform</title>
     <style>
+        @keyframes tooltipFadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
         * {
             margin: 0;
-            padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .truncate[data-tooltip]:hover:before {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: -45px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 20px;
+            background: rgba(32, 46, 60, 0.98);
+            color: white;
+            border-radius: 8px;
+            font-size: 15px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            z-index: 1000;
+            min-width: 280px;
+            max-width: 500px;
+            text-align: left;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            word-break: break-word;
+            pointer-events: none;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            animation: tooltipFadeIn 0.2s ease-out;
+            letter-spacing: 0.2px;
         }
         
         body {
             background-color: #f5f5f5;
             color: #333;
             line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         
         a {
@@ -62,20 +102,25 @@
         
         nav {
             background-color: #34495e;
-            padding: 0.8rem 1rem;
+            padding: 1rem 1.5rem;
         }
         
         .nav-links {
             display: flex;
             list-style: none;
-            gap: 1.5rem;
+            gap: 2rem;
+            margin: 0;
+            padding: 0;
         }
         
         .nav-links a {
             color: white;
-            font-weight: 500;
-            padding: 0.3rem 0;
+            font-weight: 600;
+            padding: 0.5rem 0;
             position: relative;
+            font-size: 1.1rem;
+            text-transform: none;
+            transition: color 0.2s ease;
         }
         
         .nav-links a:hover {
@@ -90,13 +135,8 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             position: sticky;
             top: 0;
-            z-index: 100;
-        }
-        
-        .filter-title {
-            font-size: 1.2rem;
-            margin-bottom: 1rem;
-            color: #2c3e50;
+            z-index: 1002;
+            margin-bottom: 0;
         }
         
         .filter-form {
@@ -143,178 +183,235 @@
             background-color: #34495e;
         }
         
+        .table-wrapper {
+            max-height: calc(100vh - 300px);
+            overflow: auto;
+            position: relative;
+        }
+
         .table-container {
             margin: 1rem;
-            overflow-x: auto;
-            max-height: calc(100vh - 300px); /* Adjust based on your header/filter height */
-            overflow-y: auto;
+            margin-top: 0;
+            margin-bottom: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            max-height: calc(100vh - 300px); /* Adjusted height */
+            min-height: 200px; /* Minimum height */
+            overflow: auto; /* Changed from visible to auto to ensure proper scrolling */
+            position: relative; /* Ensure tooltips are positioned relative to the container */
         }
         
         table {
             width: 100%;
-            border-collapse: separate; /* Changed from collapse to allow sticky header */
+            border-collapse: separate;
             border-spacing: 0;
             background-color: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
         }
         
         thead {
             position: sticky;
             top: 0;
-            z-index: 50;
             background-color: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 1001;
         }
-        
+
         th {
-            background-color: white; /* Ensure header has background */
-            position: sticky;
-            top: 0;
+            background-color: white;
             padding: 0.8rem;
             text-align: left;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 2px solid #ddd;
             font-size: 1.1rem;
-            max-width: 200px;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
         }
-        
+
+        th::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 2px;
+            background-color: #ddd;
+        }
+
+        tbody tr:first-child td {
+            padding-top: 0.8rem;
+        }
+
         td {
             padding: 0.8rem;
             text-align: left;
             border-bottom: 1px solid #ddd;
             font-size: 1.1rem;
-            max-width: 200px; /* Limit cell width */
-        }
-
-        /* Add styles for truncated text cells */
-        .truncate {
+            max-width: 200px;
             white-space: nowrap;
-            overflow: hidden;
+            overflow: visible; /* Changed from hidden to visible to ensure tooltips are displayed */
             text-overflow: ellipsis;
-            position: relative;
-            cursor: help;
+            background: white;
+            position: relative; /* Ensure proper tooltip positioning */
         }
 
-        /* Custom tooltip styles */
-        [data-tooltip] {
-            position: relative;
-            display: inline-block;
-        }
-
-        /* Desktop hover styles */
-        @media (hover: hover) {
-            [data-tooltip]:hover::after {
-                content: attr(data-tooltip);
-                position: fixed;
-                transform: translateY(-100%);
-                margin-top: -5px;
-                background-color: rgba(44, 62, 80, 0.95);
-                color: white;
-                padding: 8px 12px;
-                border-radius: 4px;
-                font-size: 0.95rem;
-                max-width: 300px;
-                white-space: normal;
-                word-wrap: break-word;
-                z-index: 1000;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                pointer-events: none;
-                transition: opacity 0.2s ease-in-out;
-            }
-        }
-
-        /* Styles for clickable rows */
-        .product-row {
-            transition: background-color 0.2s;
-        }
-        
-        /* Mobile and touch device styles */
-        @media (hover: none) or (pointer: coarse) {
-            .product-row:active {
-                background-color: rgba(44, 62, 80, 0.1);
-            }
-
-            [data-tooltip].tooltip-active::after {
-                content: attr(data-tooltip);
-                position: fixed;
-                left: 50%;
-                bottom: 20px;
-                transform: translateX(-50%);
-                background-color: rgba(44, 62, 80, 0.95);
-                color: white;
-                padding: 12px 16px;
-                border-radius: 4px;
-                font-size: 1rem;
-                width: 90%;
-                max-width: 300px;
-                white-space: normal;
-                word-wrap: break-word;
-                z-index: 1000;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                text-align: center;
-            }
-
-            .truncate {
-                position: relative;
-                cursor: pointer;
-                -webkit-tap-highlight-color: rgba(0,0,0,0.1);
-            }
-
-            .truncate:active {
-                background-color: rgba(0,0,0,0.05);
-            }
-        }
-
-        /* Rest of your existing CSS... */
-        
         footer {
             background-color: #2c3e50;
             color: white;
             padding: 1.5rem 1rem;
-            margin-top: 2rem;
+            margin-top: auto; /* Push footer to bottom */
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1rem;
+            position: relative; /* Ensure footer stays above scrollable content */
+            z-index: 1000;
         }
         
-        .footer-logo {
-            font-size: 1.8rem;
-            font-weight: bold;
-            margin-bottom: 1rem;
+        /* Ensure horizontal scrollbar is always visible */
+        .table-container::-webkit-scrollbar {
+            height: 12px;
+            width: 12px;
+            background-color: #f5f5f5;
         }
-        
-        .footer-contact {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            font-size: 1.1rem;
+
+        .table-container::-webkit-scrollbar-thumb {
+            background-color: #2c3e50;
+            border-radius: 6px;
         }
-        
-        .footer-contact a {
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
+
+        .table-container::-webkit-scrollbar-track {
+            background-color: #f5f5f5;
+            border-radius: 6px;
         }
-        
-        .footer-contact a:hover {
-            color: #f39c12;
+
+        /* Tooltip backdrop */
+        .tooltip-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.2s ease-out;
         }
-        
-        .loading {
-            text-align: center;
-            padding: 1rem;
-            font-style: italic;
-            color: #7f8c8d;
+
+        .tooltip-backdrop.active {
+            display: block;
+            opacity: 1;
         }
-        
-        .error {
-            text-align: center;
-            padding: 1rem;
-            color: #e74c3c;
-            font-weight: bold;
+
+        /* Tooltip styles */
+        .truncate {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        
+
+        .truncate[data-tooltip]:hover:before {
+            content: attr(data-tooltip);
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 16px 24px;
+            background: rgba(24, 36, 50, 0.98);
+            color: white;
+            border-radius: 10px;
+            font-size: 15px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            z-index: 10000;
+            min-width: 300px;
+            max-width: 600px;
+            text-align: left;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            word-break: break-word;
+            pointer-events: none;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            animation: tooltipFadeIn 0.2s ease-out;
+        }
+
+        .truncate[data-tooltip]:hover:after {
+            content: '';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 8px;
+            border-style: solid;
+            border-color: rgba(44, 62, 80, 0.95) transparent transparent transparent;
+            filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
+        }
+
+        /* Mobile tooltip styles */
+        @media screen and (max-width: 768px) {
+            .truncate[data-tooltip]:hover:before {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 90%;
+                max-width: 400px;
+                min-width: 280px;
+                white-space: normal;
+                word-break: break-word;
+                font-size: 16px;
+                padding: 24px;
+                box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+                z-index: 10000;
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                animation: tooltipFadeIn 0.2s ease-out;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                background: rgba(24, 36, 50, 0.98);
+            }
+
+            .truncate[data-tooltip]:hover:after {
+                display: none;
+            }
+        }
+
+        @keyframes tooltipFadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -48%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+        /* Mobile styles */
+        @media screen and (max-width: 768px) {
+            .truncate[data-tooltip]:hover:before {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 90%;
+                max-width: 350px;
+                white-space: normal;
+                word-break: break-word;
+                font-size: 16px;
+                padding: 16px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+                z-index: 10000;
+            }
+
+            .truncate[data-tooltip]:hover:after {
+                display: none;
+            }
+        }
+
         @media (max-width: 768px) {
             header {
                 flex-direction: column;
@@ -336,10 +433,9 @@
                 grid-template-columns: 1fr;
             }
             
-            table {
-                display: block;
-                width: 100%;
-                overflow-x: scroll;
+            .table-container {
+                max-height: calc(100vh - 350px); /* Adjusted for mobile */
+                margin-bottom: 1rem;
             }
         }
         
@@ -358,45 +454,49 @@
 </head>
 <body>
     <header>
-        <div>
-            <div class="logo">Tradex</div>
-            <div class="tagline">Live Commodity Prices, Live Trade</div>
-        </div>
-        <div class="contact-info">
-            <a href="https://wa.me/971509987072" target="_blank">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path fill-rule="evenodd" clip-rule="evenodd" d="M20.463 3.488C18.217 1.24 15.231 0.001 12.05 0 5.495 0 0.16 5.334 0.157 11.892c-0.001 2.096 0.547 4.142 1.588 5.946L0.057 24l6.304-1.654c1.737 0.948 3.693 1.447 5.683 1.448h0.005c6.554 0 11.89-5.335 11.893-11.893 0.002-3.18-1.234-6.167-3.479-8.413ZM12.05 21.785h-0.004c-1.774 0-3.513-0.477-5.031-1.378l-0.361-0.214-3.741 0.981 0.999-3.648-0.235-0.374c-0.99-1.574-1.512-3.393-1.511-5.26 0.002-5.45 4.437-9.884 9.891-9.884 2.64 0.001 5.122 1.031 6.988 2.898 1.866 1.869 2.893 4.352 2.892 6.993-0.003 5.45-4.437 9.886-9.887 9.886Z M17.368 14.348c-0.298-0.149-1.764-0.87-2.037-0.967-0.273-0.099-0.472-0.149-0.67 0.148-0.197 0.298-0.764 0.967-0.937 1.165-0.173 0.198-0.345 0.223-0.643 0.074-0.297-0.149-1.255-0.462-2.39-1.475-0.883-0.788-1.48-1.761-1.653-2.059-0.173-0.297-0.018-0.458 0.13-0.606 0.134-0.133 0.298-0.347 0.446-0.521 0.149-0.174 0.198-0.298 0.298-0.497 0.099-0.198 0.05-0.372-0.025-0.521-0.075-0.148-0.669-1.611-0.916-2.206-0.241-0.579-0.487-0.501-0.669-0.51-0.173-0.008-0.371-0.011-0.57-0.011-0.198 0-0.52 0.074-0.792 0.372-0.272 0.298-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074 0.149 0.198 2.096 3.2 5.077 4.487 0.709 0.306 1.262 0.489 1.694 0.625 0.712 0.227 1.36 0.195 1.871 0.118 0.571-0.085 1.758-0.719 2.006-1.413 0.248-0.694 0.248-1.29 0.173-1.414-0.074-0.124-0.272-0.198-0.57-0.347Z"/>
-                </svg>
-                +971 50 998 7072
-            </a>
-            <a href="mailto:bd@igapglobal.com">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                </svg>
-                bd@igapglobal.com
-            </a>
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">Tradex</div>
+            </div>
+            <div class="product-info">
+                <div class="tagline">Live Commodity Prices, Live Trade</div>
+            </div>
+            <div class="contact-info">
+                <a href="https://wa.me/971509987072" target="_blank">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M20.463 3.488C18.217 1.24 15.231 0.001 12.05 0 5.495 0 0.16 5.334 0.157 11.892c-0.001 2.096 0.547 4.142 1.588 5.946L0.057 24l6.304-1.654c1.737 0.948 3.693 1.447 5.683 1.448h0.005c6.554 0 11.89-5.335 11.893-11.893 0.002-3.18-1.234-6.167-3.479-8.413ZM12.05 21.785h-0.004c-1.774 0-3.513-0.477-5.031-1.378l-0.361-0.214-3.741 0.981 0.999-3.648-0.235-0.374c-0.99-1.574-1.512-3.393-1.511-5.26 0.002-5.45 4.437-9.884 9.891-9.884 2.64 0.001 5.122 1.031 6.988 2.898 1.866 1.869 2.893 4.352 2.892 6.993-0.003 5.45-4.437 9.886-9.887 9.886Z M17.368 14.348c-0.298-0.149-1.764-0.87-2.037-0.967-0.273-0.099-0.472-0.149-0.67 0.148-0.197 0.298-0.764 0.967-0.937 1.165-0.173 0.198-0.345 0.223-0.643 0.074-0.297-0.149-1.255-0.462-2.39-1.475-0.883-0.788-1.48-1.761-1.653-2.059-0.173-0.297-0.018-0.458 0.13-0.606 0.134-0.133 0.298-0.347 0.446-0.521 0.149-0.174 0.198-0.298 0.298-0.497 0.099-0.198 0.05-0.372-0.025-0.521-0.075-0.148-0.669-1.611-0.916-2.206-0.241-0.579-0.487-0.501-0.669-0.51-0.173-0.008-0.371-0.011-0.57-0.011-0.198 0-0.52 0.074-0.792 0.372-0.272 0.298-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074 0.149 0.198 2.096 3.2 5.077 4.487 0.709 0.306 1.262 0.489 1.694 0.625 0.712 0.227 1.36 0.195 1.871 0.118 0.571-0.085 1.758-0.719 2.006-1.413 0.248-0.694 0.248-1.29 0.173-1.414-0.074-0.124-0.272-0.198-0.57-0.347Z"/>
+                    </svg>
+                    +971 50 998 7072
+                </a>
+                <a href="mailto:tradex@igaptrading.com">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                    </svg>
+                    tradex@igaptrading.com
+                </a>
+            </div>
         </div>
     </header>
     
-    <nav>
-        <ul class="nav-links">
-            <li><a href="index.html">Home</a></li>
-            <li><a href="about.html">About Us</a></li>
-            <li><a href="how-it-works.html">How It Works</a></li>
-        </ul>
-    </nav>
-    
-    <section class="filter-section">
-        <h2 class="filter-title">Product Filter</h2>
+    <main>
+        <nav>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about.html">About Us</a></li>
+                <li><a href="how-it-works.html">How It Works</a></li>
+            </ul>
+        </nav>
+        
+        <section class="filter-section">
         <form class="filter-form">
             <div class="filter-group">
                 <label for="commodity">Commodity</label>
                 <select id="commodity" name="commodity">
                     <option value="all">All Commodities</option>
-                    <option value="Steel">Steel</option>
                     <option value="Aluminum">Aluminum</option>
                     <option value="Copper">Copper</option>
                     <option value="Iron">Iron</option>
+                    <option value="Steel">Steel</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -415,36 +515,39 @@
         </form>
     </section>
     
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Major Group</th>
-                    <th>QuoteID</th>
-                    <th>ProductID</th>
-                    <th>Product Name</th>
-                    <th>Description</th>
-                    <th>Origin</th>
-                    <th>Quality/Grade</th>
-                    <th>Quantity (MT)</th>
-                    <th>Price (USD/MT)</th>
-                    <th>Total Price (USD)</th>
-                    <th>Margin Required (%)</th>
-                    <th>Packing</th>
-                    <th>Delivery Terms</th>
-                    <th>Payment Terms</th>
-                    <th>General T&C</th>
-                    <th>Documents</th>
-                    <th>Remarks</th>
-                </tr>
-            </thead>
-            <tbody id="productsTableBody">
-                <tr>
-                    <td colspan="17" class="loading">Loading products...</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="table-wrapper">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Major Group</th>
+                        <th>QuoteID</th>
+                        <th>ProductID</th>
+                        <th>Product Name</th>
+                        <th>Description</th>
+                        <th>Origin</th>
+                        <th>Quality/Grade</th>
+                        <th>Quantity (MT)</th>
+                        <th>Price (USD/MT)</th>
+                        <th>Total Price (USD)</th>
+                        <th>Margin Required (%)</th>
+                        <th>Packing</th>
+                        <th>Delivery Terms</th>
+                        <th>Payment Terms</th>
+                        <th>General T&C</th>
+                        <th>Documents</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody id="productsTableBody">
+                    <tr>
+                        <td colspan="17" class="loading">Loading products...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
+    </main>
     
     <footer>
         <div class="footer-logo">Tradex</div>
@@ -455,11 +558,11 @@
                 </svg>
                 +971 50 998 7072
             </a>
-            <a href="mailto:bd@igapglobal.com">
+            <a href="mailto:tradex@igaptrading.com">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
                 </svg>
-                bd@igapglobal.com
+                tradex@igaptrading.com
             </a>
         </div>
     </footer>
@@ -609,7 +712,9 @@
                     const product = document.getElementById('product').value;
                     
                     // Build query with current filters
-                    let query = supabaseClient.from('products').select('product_id,updated_at');
+                    let query = supabaseClient.from('products')
+                        .select('product_id,updated_at')
+                        .order('created_at', { ascending: false }); // Keep same ordering as main query
                     
                     if (commodity !== 'all') {
                         query = query.eq('major_group', commodity);
@@ -676,7 +781,8 @@
                 // Build the query based on filters
                 let query = supabaseClient
                     .from('products')
-                    .select('*');
+                    .select('*')
+                    .order('created_at', { ascending: false }); // Order by creation date, newest first
 
                 if (commodity !== 'all') {
                     query = query.eq('major_group', commodity);
@@ -699,42 +805,37 @@
                     return;
                 }
 
-                // Helper function to truncate and create tooltip
-                function formatCell(content, maxLength = 20) {
-                    if (!content || content === '-') return '<td>-</td>';
-                    const text = String(content);
-                    if (text.length <= maxLength) {
-                        return `<td>${text}</td>`;
-                    }
-                    return `<td class="truncate" data-tooltip="${text.replace(/"/g, '&quot;')}">${text.substring(0, maxLength)}...</td>`;
-                }
-
-                // Helper function to format numbers without truncation
-                function formatNumber(value) {
-                    if (!value || value === '-') return '<td>-</td>';
-                    return `<td>${value.toLocaleString()}</td>`;
-                }
+                // Helper function to create cell content with conditional tooltip
+                const createCell = (content) => {
+                    if (!content || content === '-') return '<span class="truncate">-</span>';
+                    content = content.toString().trim();
+                    const escapedContent = content.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    const displayContent = content.length > 25 ? content.substring(0, 25) + '...' : content;
+                    return content.length > 25 
+                        ? `<span class="truncate" data-tooltip="${escapedContent}">${displayContent}</span>`
+                        : `<span class="truncate">${displayContent}</span>`;
+                };
 
                 // Render products
                 tableBody.innerHTML = products.map(product => `
                     <tr class="product-row" data-product-id="${product.product_id}" style="cursor: pointer;">
-                        ${formatCell(product.major_group)}
-                        ${formatCell(product.quote_id)}
-                        ${formatCell(product.product_id)}
-                        ${formatCell(product.product_name)}
-                        ${formatCell(product.description, 20)}
-                        ${formatCell(product.origin)}
-                        ${formatCell(product.quality_grade)}
-                        ${formatNumber(product.quantity)}
-                        ${formatNumber(product.price)}
-                        ${formatNumber(product.quantity && product.price ? (product.quantity * product.price) : null)}
-                        ${formatCell(product.margin_required)}
-                        ${formatCell(product.packing)}
-                        ${formatCell(product.delivery_terms)}
-                        ${formatCell(product.payment_terms)}
-                        ${formatCell(product.general_tc)}
-                        ${formatCell(product.documents)}
-                        ${formatCell(product.remarks)}
+                        <td>${createCell(product.major_group)}</td>
+                        <td>${createCell(product.quote_id)}</td>
+                        <td>${createCell(product.product_id)}</td>
+                        <td>${createCell(product.product_name)}</td>
+                        <td>${createCell(product.description)}</td>
+                        <td>${createCell(product.origin)}</td>
+                        <td>${createCell(product.quality_grade)}</td>
+                        <td>${product.quantity ? product.quantity.toLocaleString() : '0'}</td>
+                        <td>${product.price ? product.price.toLocaleString() : '0'}</td>
+                        <td>${(product.quantity && product.price) ? (product.quantity * product.price).toLocaleString() : '0'}</td>
+                        <td>${createCell(product.margin_required)}</td>
+                        <td>${createCell(product.packing)}</td>
+                        <td>${createCell(product.delivery_terms)}</td>
+                        <td>${createCell(product.payment_terms)}</td>
+                        <td>${createCell(product.general_tc)}</td>
+                        <td>${createCell(product.documents)}</td>
+                        <td>${createCell(product.remarks)}</td>
                     </tr>
                 `).join('');
 
@@ -821,45 +922,112 @@
             productList.innerHTML = productTable;
         }
 
-        // Handle mobile tooltip functionality
+        // Handle tooltip popup functionality
         function setupMobileTooltips() {
             let activeTooltip = null;
-            const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
-            if (!isTouchDevice) return;
-
-            // Hide tooltip when clicking outside
-            document.addEventListener('click', (e) => {
-                if (activeTooltip && !e.target.closest('[data-tooltip]')) {
-                    activeTooltip.classList.remove('tooltip-active');
-                    activeTooltip = null;
+            let backdrop = null;
+            const body = document.body;
+            
+            // Prevent tooltip from disappearing when hovering over it
+            document.addEventListener('mouseover', (e) => {
+                const tooltip = e.target.closest('[data-tooltip]');
+                if (tooltip) {
+                    tooltip.classList.add('tooltip-active');
                 }
             });
 
+            document.addEventListener('mouseout', (e) => {
+                const tooltip = e.target.closest('[data-tooltip]');
+                if (tooltip) {
+                    tooltip.classList.remove('tooltip-active');
+                }
+            });
+
+            // Create backdrop element
+            function createBackdrop() {
+                if (!backdrop) {
+                    backdrop = document.createElement('div');
+                    backdrop.className = 'tooltip-backdrop';
+                    document.body.appendChild(backdrop);
+                    
+                    // Close tooltip when clicking backdrop
+                    backdrop.addEventListener('click', () => {
+                        if (activeTooltip) {
+                            closeTooltip();
+                        }
+                    });
+                }
+            }
+
+            function closeTooltip() {
+                if (activeTooltip) {
+                    activeTooltip.classList.remove('tooltip-active');
+                    activeTooltip = null;
+                }
+                if (backdrop) {
+                    backdrop.classList.remove('active');
+                }
+            }
+
             // Handle tooltip clicks
-            document.addEventListener('click', (e) => {
+            body.addEventListener('click', (e) => {
                 const tooltipElement = e.target.closest('[data-tooltip]');
                 if (!tooltipElement) return;
 
                 e.preventDefault();
+                e.stopPropagation();
 
                 if (activeTooltip === tooltipElement) {
-                    tooltipElement.classList.remove('tooltip-active');
-                    activeTooltip = null;
+                    closeTooltip();
                 } else {
                     if (activeTooltip) {
-                        activeTooltip.classList.remove('tooltip-active');
+                        closeTooltip();
                     }
+                    
+                    createBackdrop();
                     tooltipElement.classList.add('tooltip-active');
+                    backdrop.classList.add('active');
                     activeTooltip = tooltipElement;
+
+                }
+            });
+
+            // Close tooltip when pressing Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && activeTooltip) {
+                    closeTooltip();
+                }
+            });
+
+            // Close tooltip when scrolling
+            let scrollTimeout;
+            window.addEventListener('scroll', () => {
+                if (activeTooltip) {
+                    clearTimeout(scrollTimeout);
+                    scrollTimeout = setTimeout(() => {
+                        closeTooltip();
+                    }, 150);
+                }
+            }, { passive: true });
+        }
+
+        // Ensure tooltips are properly truncated
+        function updateTruncatedCells() {
+            const cells = document.querySelectorAll('.truncate');
+            cells.forEach(cell => {
+                if (cell.scrollWidth > cell.clientWidth) {
+                    cell.setAttribute('data-tooltip', cell.textContent);
+                } else {
+                    cell.removeAttribute('data-tooltip');
                 }
             });
         }
 
-        // Initialize tooltips when DOM is loaded
+        // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
             setupMobileTooltips();
-            // ... rest of your initialization code ...
+            updateTruncatedCells();
+            window.addEventListener('resize', updateTruncatedCells);
         });
     </script>
 </body>
