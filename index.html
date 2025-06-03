@@ -18,7 +18,11 @@
 
         * {
             margin: 0;
-                 .truncate[data-tooltip]:hover:before {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .truncate[data-tooltip]:hover:before {
             content: attr(data-tooltip);
             position: absolute;
             top: -45px;
@@ -42,8 +46,7 @@
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             animation: tooltipFadeIn 0.2s ease-out;
-            letter-spacing: 0.2px;       box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            letter-spacing: 0.2px;
         }
         
         body {
