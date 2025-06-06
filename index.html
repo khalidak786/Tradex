@@ -688,6 +688,19 @@
       // Import Supabase client creator
       import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/+esm'
 
+      // Make these functions available globally
+      window.initializeAuth = null;
+      window.initializeApp = null;
+      window.handleAuthError = null;
+      window.setupPolling = null;
+      window.fetchProducts = null;
+      window.updateFilterOptions = null;
+      window.calculateDataHash = null;
+      window.setupMobileTooltips = null;
+      window.updateTruncatedCells = null;
+      window.truncateText = null;
+      window.displayProducts = null;
+
       // Initialize Supabase client
       const supabaseClient = createClient(
         'https://xuackwkjvjjdqjmisqlk.supabase.co',
@@ -707,132 +720,202 @@
       // Export for use in other functions
       window.supabaseClient = supabaseClient;
 
-      // Wait for DOM to be ready
-      document.addEventListener('DOMContentLoaded', async () => {
-        // Handle potential error in URL
-        const urlParams = new URLSearchParams(window.location.search);
+      // Initialize the application
+      async function initializeApp() {
+        try {
+          const { data: { session }, error } = await supabaseClient.auth.getSession();
+          if (error) throw error;
+          
+          if (session) {
+            console.log('User is authenticated, initializing app...');
+            // Initialize filters
+            await updateFilterOptions();
+            // Load initial products
+            await fetchProducts(true);
+            // Setup polling for updates
+            setupPolling();
+            // Setup all event handlers
+            await setupEventHandlers();
+            // Setup mobile tooltips
+            setupMobileTooltips();
+          } else {
+            console.log('User is not authenticated, redirecting to login...');
+            window.location.href = 'login.html';
+          }
+        } catch (error) {
+          handleAuthError(error);
+        }
+      }
+      window.initializeApp = initializeApp;
+
+      // Call initialize when the page loads
+      document.addEventListener('DOMContentLoaded', () => {
+        initializeApp();
+      });
+
+      async function handleAuthError(error) {
+        console.error('Auth error:', error);
+        localStorage.removeItem('tradex-auth');
+        sessionStorage.removeItem('tradex-auth');
+        try {
+            await supabaseClient.auth.signOut();
+        } catch (e) {
+            console.error('Error during cleanup:', e);
+        }
+        let errorMessage = error.message || 'Authentication failed';
+        if (error.message?.includes('exchange external code')) {
+            errorMessage = 'Unable to complete sign in. Please try again.';
+        }
+        alert(errorMessage);
+        window.history.replaceState({}, document.title, '/');
+        window.location.reload();
+      }
+      window.handleAuthError = handleAuthError;
+
+      function setupPolling() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+        pollingInterval = setInterval(async () => {
+            try {
+                console.log('Checking for updates...');
+                const commodity = document.getElementById('commodity').value;
+                const product = document.getElementById('product').value;
+                let query = supabaseClient.from('products')
+                    .select('product_id,product_name')
+                    .order('product_id', { ascending: false });
+                if (commodity !== 'all') {
+                    query = query.eq('major_group', commodity);
+                }
+                if (product !== 'all') {
+                    query = query.eq('product_name', product);
+                }
+                const { data: products, error } = await query;
+                if (error) throw error;
+                const currentHash = calculateDataHash(products);
+                if (currentHash !== lastDataHash) {
+                    console.log('Data changed, updating display...');
+                    lastDataHash = currentHash;
+                    fetchProducts();
+                } else {
+                    console.log('No changes detected');
+                }
+            } catch (error) {
+                console.error('Error checking for updates:', error);
+            }
+        }, 5000);
+      }
+      window.setupPolling = setupPolling;
+
+      async function fetchProducts(isInitialLoad = false) {
+        const tableBody = document.getElementById('productsTableBody');
+        const filterButton = document.getElementById('applyFilter');
         
-        if (urlParams.get('error')) {
-            const errorDescription = urlParams.get('error_description');
-            console.error('Auth Error:', errorDescription);
-            alert(`Authentication failed: ${errorDescription || 'Please try again'}`);
-            // Clear error params from URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-            return;
-        }
-
-        // Also check hash fragment for errors
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        if (hashParams.get('error')) {
-            const errorDescription = hashParams.get('error_description');
-            console.error('Auth Error in hash:', errorDescription);
-            alert(`Authentication failed: ${errorDescription || 'Please try again'}`);
-            // Clear hash
-            window.location.hash = '';
-            return;
-        }
-
-        // Check if user is already authenticated
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session) {
-            // If we're on the index page and authenticated, redirect to dashboard
-            if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-                window.location.href = './dashboard.html';
+        try {
+            if (isInitialLoad) {
+                tableBody.innerHTML = '<tr><td colspan="17" class="loading">Loading products...</td></tr>';
+            }
+            if (filterButton) {
+                filterButton.disabled = true;
+            }
+            
+            const commodity = document.getElementById('commodity').value;
+            const product = document.getElementById('product').value;
+            
+            let query = supabaseClient
+                .from('products')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (commodity !== 'all') {
+                query = query.eq('major_group', commodity);
+            }
+            if (product !== 'all') {
+                query = query.eq('product_name', product);
+            }
+            
+            const { data: products, error } = await query;
+            
+            if (error) {
+                throw error;
+            }
+            
+            if (!products || products.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="17" class="no-data">No products found matching your criteria</td></tr>';
                 return;
             }
-        }
-        // Handle auth state changes
-        supabaseClient.auth.onAuthStateChange((event, session) => {
-            console.log('Auth state changed:', event, 'Current path:', window.location.pathname);
-            if (event === 'SIGNED_IN' && session) {
-                console.log('User logged in:', session.user.email);
-                
-                // Clear any leftover auth parameters
-                if (window.location.hash || window.location.search) {
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-                
-                // Check if we're not already on the dashboard
-                if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-                    console.log('Redirecting to dashboard...');
-                    window.location.href = './dashboard.html';
-                    return;
-                }
-                
-                // Update dropdown to show user info
-                const authDropdown = document.getElementById('authDropdown');
-                authDropdown.innerHTML = `
-                    <div class="auth-title">Welcome${session.user.email ? ', ' + session.user.email : ''}!</div>
-                    <div class="auth-option" id="signOut">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-                        </svg>
-                        Sign Out
-                    </div>
-                `;
-                
-                // Add sign out handler
-                document.getElementById('signOut')?.addEventListener('click', async () => {
-                    await supabaseClient.auth.signOut();
-                    window.location.reload();
-                });
+            
+            // Update data hash for polling comparison
+            lastDataHash = calculateDataHash(products);
+            
+            // Render the products
+            tableBody.innerHTML = products.map(product => `
+                <tr class="product-row" data-product-id="${product.product_id}" style="cursor: pointer;">
+                    <td>${createCell(product.major_group)}</td>
+                    <td>${createCell(product.quote_id)}</td>
+                    <td>${createCell(product.product_id)}</td>
+                    <td>${createCell(product.product_name)}</td>
+                    <td>${createCell(product.description)}</td>
+                    <td>${createCell(product.origin)}</td>
+                    <td>${createCell(product.quality_grade)}</td>
+                    <td>${product.quantity ? product.quantity.toLocaleString() : '0'}</td>
+                    <td>${product.price ? product.price.toLocaleString() : '0'}</td>
+                    <td>${(product.quantity && product.price) ? (product.quantity * product.price).toLocaleString() : '0'}</td>
+                    <td>${createCell(product.margin_required)}</td>
+                    <td>${createCell(product.packing)}</td>
+                    <td>${createCell(product.delivery_terms)}</td>
+                    <td>${createCell(product.payment_terms)}</td>
+                    <td>${createCell(product.general_tc)}</td>
+                    <td>${createCell(product.documents)}</td>
+                    <td>${createCell(product.remarks)}</td>
+                </tr>
+            `).join('');
+            
+            // Update truncated cells for mobile
+            updateTruncatedCells();
+            
+        } catch (error) {
+            console.error("Failed to load products:", error);
+            tableBody.innerHTML = `
+                <tr><td colspan="17" class="error">
+                    Error loading products: ${error.message || 'Unknown error'}
+                </td></tr>
+            `;
+        } finally {
+            if (filterButton) {
+                filterButton.disabled = false;
             }
-        });
+        }
+      }
+      window.fetchProducts = fetchProducts;
 
-        // Check for authentication callback
-        const code = urlParams.get('code');
-        if (hashParams.get('access_token') || code) {
-            console.log('Detected auth callback...');
-            try {
-                // Only try to exchange the code once per callback
-                if (code) {
-                    try {
-                        console.log('Starting code exchange process...');
-                        console.log('Code length:', code?.length);
-                        console.log('Code preview:', code?.substring(0, 10) + '...');
-                        
-                        // Clear all auth-related data first
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        
-                        console.log('Creating fresh Supabase client...');
-                        // Force a fresh Supabase client
-                        const freshClient = createClient(
-                            'https://xuackwkjvjjdqjmisqlk.supabase.co',
-                            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWNrd2tqdmpqZHFqbWlzcWxrIiwicm9zZSI6ImFub24iLCJpYXQiOjE3NDg4MDI5NjIsImV4cCI6MjA2NDM3ODk2Mn0.qt2VSui1WWWjmJRGbQeyqggYYIG2rYRKAO1ICHjxdzk',
-                            {
-                                auth: {
-                                    persistSession: true,
-                                    autoRefreshToken: true,
-                                    detectSessionInUrl: true,
-                                    storage: window.localStorage,
-                                    storageKey: 'supabase.auth.token',
-                                    flowType: 'pkce'
-                                }
-                            }
-                        );
-                        
-                        // Wait for client initialization
-                        console.log('Waiting for client initialization...');
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        
-                        // Try code exchange with fresh client
-                        console.log('Attempting code exchange...');
-                        const { data, error } = await freshClient.auth.exchangeCodeForSession(code);
-                        
-                        if (error) {
-                            console.error('Code exchange error details:', {
-                                message: error.message,
-                                status: error.status,
-                                name: error.name
-                            });
-                            if (error.message?.includes('external code')) {
-                                await supabaseClient.auth.signOut();
-                                window.location.href = './index.html';
-                                return;
-                            }
-                            throw error;
-                        }
-                        
-                        console.log('Code exchange successful:', data);
-                        // ...existing code...
+      // Helper function to create table cells with truncation
+      function createCell(content) {
+        if (!content || content === '-') return '<span class="truncate">-</span>';
+        content = content.toString().trim();
+        const escapedContent = content.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const displayContent = content.length > 25 ? content.substring(0, 25) + '...' : content;
+        return content.length > 25 
+            ? `<span class="truncate" data-tooltip="${escapedContent}">${displayContent}</span>`
+            : `<span class="truncate">${displayContent}</span>`;
+      }
+
+      function setupMobileTooltips() {
+        document.querySelectorAll('.truncate[data-tooltip]').forEach(element => {
+          element.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent row click when clicking tooltip
+            alert(element.getAttribute('data-tooltip'));
+          });
+        });
+      }
+      window.setupMobileTooltips = setupMobileTooltips;
+
+      function updateTruncatedCells() {
+        document.querySelectorAll('.truncate[data-tooltip]').forEach(element => {
+          const tooltipText = element.getAttribute('data-tooltip');
+          if (tooltipText && tooltipText.length > 25) {
+            element.textContent = tooltipText.substring(0, 25) + '...';
+          }
+        });
+      }
+      window.updateTruncatedCells = updateTruncatedCells;
