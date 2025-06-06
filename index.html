@@ -699,8 +699,8 @@
                     autoRefreshToken: true,
                     detectSessionInUrl: true,
                     storage: window.localStorage,
-                    storageKey: 'tradex-auth',
-                    flowType: 'implicit'  // Use implicit flow to match Google OAuth setup
+                    storageKey: 'supabase.auth.token',
+                    flowType: 'pkce'
                 }
             }
         );
@@ -744,6 +744,12 @@
                 console.log('Auth state changed:', event, 'Current path:', window.location.pathname);
                 if (event === 'SIGNED_IN' && session) {
                     console.log('User logged in:', session.user.email);
+                    
+                    // Clear any leftover auth parameters
+                    if (window.location.hash || window.location.search) {
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
+                    
                     // Check if we're not already on the dashboard
                     if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
                         console.log('Redirecting to dashboard...');
@@ -771,9 +777,69 @@
                 }
             });
 
-            // Check if we're handling a redirect
-            if (window.location.hash || window.location.search) {
-                console.log('Handling auth redirect...');
+            // Check for authentication callback
+            const code = urlParams.get('code');
+            if (hashParams.get('access_token') || code) {
+                console.log('Detected auth callback...');
+                try {
+                    // Only try to exchange the code once per callback
+                    if (code) {
+                        try {
+                            console.log('Starting code exchange process...');
+                            
+                            // Longer initial delay to ensure Supabase is ready
+                            console.log('Waiting for Supabase initialization...');
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            
+                            // Try to exchange the code
+                            console.log('Exchanging auth code...');
+                            const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code);
+                            if (error) {
+                                console.error('Code exchange error:', error);
+                                throw error;
+                            }
+                            
+                            console.log('Code exchange successful, waiting for session establishment...');
+                            // Longer delay after code exchange
+                            await new Promise(resolve => setTimeout(resolve, 1500));
+                            
+                            // Verify session is active
+                            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+                            if (sessionError) throw sessionError;
+                            
+                            if (!session) {
+                                console.error('No active session found after exchange');
+                                throw new Error('Failed to establish session');
+                            }
+                            
+                            console.log('Session verified:', session.user);
+                            
+                            // Store session indication and user info
+                            localStorage.setItem('tradex-session-active', 'true');
+                            localStorage.setItem('tradex-user-email', session.user.email);
+                            
+                            // Clean up URL and session state
+                            window.history.replaceState({}, document.title, '/');
+                            
+                            // Short delay before redirect
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            
+                            // Use replace to prevent back button issues
+                            console.log('Redirecting to dashboard...');
+                            window.location.replace('./dashboard.html');
+                            return;
+                            
+                        } catch (error) {
+                            // Clear any partial session state
+                            localStorage.removeItem('tradex-session-active');
+                            localStorage.removeItem('tradex-user-email');
+                            throw error;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error during auth callback:', error);
+                    await handleAuthError(error);
+                }
             }
 
             // Initialize other functionality
@@ -788,25 +854,24 @@
 
             googleAuth.addEventListener('click', async () => {
                 try {
-                    // Use absolute URL for dashboard redirect
-                    const redirectUrl = 'https://login.igaptrading.com/dashboard.html';
+                    console.log('Starting Google auth...');
                     const { data, error } = await supabaseClient.auth.signInWithOAuth({
                         provider: 'google',
                         options: {
-                            redirectTo: redirectUrl,
-                            skipBrowserRedirect: false,
+                            redirectTo: `${window.location.origin}/index.html`,
                             queryParams: {
                                 access_type: 'offline',
-                                prompt: 'consent'
+                                prompt: 'select_account consent'
                             }
                         }
                     });
 
                     if (error) throw error;
-                    console.log('Google auth initiated');
+                    console.log('Google auth initiated, waiting for redirect...');
+                    // Add small delay to ensure the redirect happens
+                    await new Promise(resolve => setTimeout(resolve, 100));
                 } catch (error) {
-                    console.error('Error with Google auth:', error.message);
-                    alert('Authentication failed: ' + error.message);
+                    await handleAuthError(error);
                 }
             });
 
@@ -1293,6 +1358,34 @@
             updateTruncatedCells();
             window.addEventListener('resize', updateTruncatedCells);
         });
+
+        // Helper function to handle auth errors
+        async function handleAuthError(error) {
+            console.error('Auth error:', error);
+            
+            // Clear any stored auth state
+            localStorage.removeItem('tradex-auth');
+            sessionStorage.removeItem('tradex-auth');
+            
+            // Try to sign out to clean up any partial auth state
+            try {
+                await supabaseClient.auth.signOut();
+            } catch (e) {
+                console.error('Error during cleanup:', e);
+            }
+
+            // Show error to user with more context
+            let errorMessage = error.message || 'Authentication failed';
+            if (error.message?.includes('exchange external code')) {
+                errorMessage = 'Unable to complete sign in. Please try again.';
+            }
+            alert(errorMessage);
+            
+            // Clean up URL and force a clean state
+            window.history.replaceState({}, document.title, '/');
+            // Reload the page to ensure a fresh state
+            window.location.reload();
+        }
     </script>
 </body>
 </html>

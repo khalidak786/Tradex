@@ -81,44 +81,102 @@
                     autoRefreshToken: true,
                     detectSessionInUrl: true,
                     storage: window.localStorage,
-                    storageKey: 'tradex-auth',
-                    flowType: 'pkce'
+                    storageKey: 'supabase.auth.token',  // Match the key used in index.html
+                    flowType: 'pkce'  // Use PKCE flow for better security
                 }
             }
         );
 
         // Check authentication status when page loads
         document.addEventListener('DOMContentLoaded', async () => {
-            const { data: { session }, error } = await supabaseClient.auth.getSession();
-            
-            if (error) {
+            try {
+                // Wait for Supabase to initialize and recover session
+                console.log('Initializing authentication check...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Get the session once and reuse it
+                const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+                console.log('Session check result:', session ? 'Session found' : 'No session');
+
+                if (sessionError) {
+                    console.error('Session error:', sessionError);
+                    throw sessionError;
+                }
+
+                // Single session check with comprehensive logging
+                if (!session?.user?.id) {
+                    console.log('No valid session found, redirecting to login...');
+                    const storedSession = localStorage.getItem('supabase.auth.token');
+                    console.log('Stored session token exists:', !!storedSession);
+                    
+                    // Clean up any stale session data
+                    localStorage.removeItem('tradex-session-active');
+                    localStorage.removeItem('supabase.auth.token');
+                    sessionStorage.removeItem('supabase.auth.token');
+                    
+                    // Use replace to prevent back navigation
+                    window.location.replace('./index.html');
+                    return;
+                }
+
+                // Session is valid, prevent any redirect race conditions
+                let isRedirecting = false;
+
+                // Set up auth state change listener
+                supabaseClient.auth.onAuthStateChange((event, session) => {
+                    console.log('Auth state changed:', event, 'Session:', session ? 'exists' : 'none');
+                    
+                    // Only handle the redirect if we're not already redirecting
+                    if (!isRedirecting && (event === 'SIGNED_OUT' || !session)) {
+                        console.log('User signed out or session expired, initiating redirect...');
+                        isRedirecting = true;
+
+                        // Clean up auth state
+                        localStorage.removeItem('tradex-session-active');
+                        localStorage.removeItem('supabase.auth.token');
+                        sessionStorage.removeItem('supabase.auth.token');
+                        
+                        // Use replace with adequate delay
+                        setTimeout(() => {
+                            window.location.replace('./index.html');
+                        }, 500);
+                    }
+                });
+
+                // Display user information
+                const userInfo = document.getElementById('userInfo');
+                const user = session.user;
+                userInfo.innerHTML = `
+                    <p>Signed in as: ${user.email}</p>
+                    ${user.user_metadata.full_name ? `<p>Name: ${user.user_metadata.full_name}</p>` : ''}
+                `;
+            } catch (error) {
                 console.error('Error checking auth status:', error.message);
                 window.location.href = './index.html';
-                return;
             }
-
-            if (!session) {
-                console.log('No active session found');
-                window.location.href = './index.html';
-                return;
-            }
-
-            // Display user information
-            const userInfo = document.getElementById('userInfo');
-            const user = session.user;
-            userInfo.innerHTML = `
-                <p>Signed in as: ${user.email}</p>
-                ${user.user_metadata.full_name ? `<p>Name: ${user.user_metadata.full_name}</p>` : ''}
-            `;
         });
 
-        // Handle logout
+        // Handle logout with proper cleanup
         document.getElementById('logoutButton').addEventListener('click', async () => {
             try {
+                // Clear all auth-related storage
+                localStorage.removeItem('tradex-session-active');
+                localStorage.removeItem('tradex-user-email');
+                localStorage.removeItem('supabase.auth.token');
+                sessionStorage.removeItem('supabase.auth.token');
+                
                 await supabaseClient.auth.signOut();
-                window.location.href = './index.html';
+                
+                // Add adequate delay to ensure cleanup is complete
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Use replace to prevent back navigation
+                window.location.replace('./index.html');
             } catch (error) {
                 console.error('Error signing out:', error.message);
+                alert('Error signing out: ' + error.message);
+                // Force redirect on error to ensure user can sign in again
+                window.location.href = './index.html';
             }
         });
     </script>
