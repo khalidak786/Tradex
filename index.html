@@ -785,26 +785,39 @@
                     // Only try to exchange the code once per callback
                     if (code) {
                         try {
-                            console.log('Starting code exchange process...');
+                            console.log('Starting code exchange process for code:', code?.substring(0, 10) + '...');
                             
-                            // Clear any existing session data first
-                            localStorage.removeItem('tradex-session-active');
-                            localStorage.removeItem('tradex-user-email');
-                            localStorage.removeItem('supabase.auth.token');
-                            sessionStorage.removeItem('supabase.auth.token');
+                            // Clear all auth-related data first
+                            localStorage.clear();
+                            sessionStorage.clear();
                             
-                            // Wait for clean state
-                            await new Promise(resolve => setTimeout(resolve, 500));
+                            // Force a fresh Supabase client
+                            const freshClient = createClient(
+                                'https://xuackwkjvjjdqjmisqlk.supabase.co',
+                                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWNrd2tqdmpqZHFqbWlzcWxrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDI5NjIsImV4cCI6MjA2NDM3ODk2Mn0.qt2VSui1WWWjmJRGbQeyqggYYIG2rYRKAO1ICHjxdzk',
+                                {
+                                    auth: {
+                                        persistSession: true,
+                                        autoRefreshToken: true,
+                                        detectSessionInUrl: true,
+                                        storage: window.localStorage,
+                                        storageKey: 'supabase.auth.token',
+                                        flowType: 'pkce'
+                                    }
+                                }
+                            );
                             
-                            // Try to exchange the code
-                            console.log('Exchanging auth code:', code);
-                            const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code);
+                            // Wait for client initialization
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            
+                            // Try code exchange with fresh client
+                            console.log('Attempting code exchange...');
+                            const { data, error } = await freshClient.auth.exchangeCodeForSession(code);
                             if (error) {
                                 console.error('Code exchange error:', error);
-                                // If it's an invalid code error, try refreshing the page
                                 if (error.message?.includes('external code')) {
-                                    console.log('Invalid code, refreshing page...');
-                                    window.location.reload();
+                                    await supabaseClient.auth.signOut();
+                                    window.location.href = './index.html';
                                     return;
                                 }
                                 throw error;
@@ -866,20 +879,28 @@
             googleAuth.addEventListener('click', async () => {
                 try {
                     console.log('Starting Google auth...');
-                    // Get full URL to ensure proper redirect
-                    const currentUrl = new URL(window.location.href);
-                    const redirectUrl = new URL('/index.html', currentUrl.origin);
+                    
+                    // Clear any existing auth state
+                    localStorage.removeItem('tradex-session-active');
+                    localStorage.removeItem('tradex-user-email');
+                    localStorage.removeItem('supabase.auth.token');
+                    sessionStorage.removeItem('supabase.auth.token');
+                    
+                    // Wait for storage to clear
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // Get absolute redirect URL using window.location.origin
+                    const redirectUrl = window.location.origin + '/index.html';
+                    console.log('Using redirect URL:', redirectUrl);
                     
                     const { data, error } = await supabaseClient.auth.signInWithOAuth({
                         provider: 'google',
                         options: {
-                            redirectTo: redirectUrl.toString(),
+                            redirectTo: redirectUrl,
+                            skipBrowserRedirect: false,
                             queryParams: {
                                 access_type: 'offline',
-                                prompt: 'select_account consent',
-                                state: Buffer.from(JSON.stringify({
-                                    redirectedFrom: window.location.pathname
-                                })).toString('base64')
+                                prompt: 'consent select_account'
                             }
                         }
                     });
