@@ -736,31 +736,82 @@
       // Export for use in other functions
       window.supabaseClient = supabaseClient;
 
+      // Function to handle Google sign in
+      async function handleGoogleSignIn() {
+        try {
+          console.log('Initiating Google sign in...');
+          const { data, error } = await supabaseClient.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: `${window.location.origin}/dashboard.html`,
+              queryParams: {
+                access_type: 'offline',
+                prompt: 'consent'
+              }
+            }
+          });
+          
+          if (error) throw error;
+          
+          console.log('SignIn successful:', data);
+          
+        } catch (error) {
+          console.error('Error during Google sign in:', error);
+          handleAuthError(error);
+        }
+      }
+
+      // Setup authentication event listeners
+      function setupAuthEventListeners() {
+        console.log('Setting up auth event listeners...');
+        
+        // Google auth button
+        const googleAuthBtn = document.getElementById('googleAuth');
+        if (googleAuthBtn) {
+          googleAuthBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleGoogleSignIn();
+          });
+        }
+        
+        // Email auth button (if implemented)
+        const emailAuthBtn = document.getElementById('emailAuth');
+        if (emailAuthBtn) {
+          emailAuthBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            alert('Email authentication will be implemented soon!');
+          });
+        }
+
+        // Auth state change listener
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+          console.log('Auth state changed:', event, 'Session:', session ? 'exists' : 'none');
+          
+          if (event === 'SIGNED_IN') {
+            console.log('User signed in, redirecting to dashboard...');
+            window.location.href = '/dashboard.html';
+          } else if (event === 'SIGNED_OUT') {
+            console.log('User signed out, redirecting...');
+            window.location.href = '/';
+          }
+        });
+      }
+
       // Initialize the application
       async function initializeApp() {
         try {
           console.log('Initializing app...');
+          setupAuthEventListeners(); // Setup auth event listeners first
+          
           const { data: { session }, error } = await supabaseClient.auth.getSession();
           console.log('Auth session:', session ? 'Found' : 'Not found', error ? `Error: ${error.message}` : '');
           
-          // For development, temporarily skip auth check
-          const skipAuth = true; // Remove this in production
-          
-          if (skipAuth || session) {
-            console.log('User is authenticated or auth is skipped, initializing app...');
-            // Initialize filters
-            await updateFilterOptions();
-            // Load initial products
-            await fetchProducts(true);
-            // Setup polling for updates
-            setupPolling();
-            // Setup all event handlers
-            await setupEventHandlers();
-            // Setup mobile tooltips
-            setupMobileTooltips();
-          } else {
-            console.log('User is not authenticated, redirecting to login...');
-            window.location.href = 'login.html';
+          if (session) {
+            console.log('User is authenticated, redirecting to dashboard...');
+            window.location.href = '/dashboard.html';
+            return;
           }
         } catch (error) {
           console.error('Error in initializeApp:', error);
