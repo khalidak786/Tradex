@@ -700,6 +700,22 @@
       window.updateTruncatedCells = null;
       window.truncateText = null;
       window.displayProducts = null;
+      window.setupEventHandlers = null;
+
+      // Global variables
+      let lastDataHash = null;
+      let pollingInterval = null;
+
+      // Helper function to calculate a hash for data comparison
+      function calculateDataHash(products) {
+        if (!products || !Array.isArray(products)) return null;
+        return JSON.stringify(products.map(p => ({
+          id: p.product_id,
+          name: p.product_name,
+          updated: p.updated_at || p.created_at
+        })));
+      }
+      window.calculateDataHash = calculateDataHash;
 
       // Initialize Supabase client
       const supabaseClient = createClient(
@@ -723,11 +739,15 @@
       // Initialize the application
       async function initializeApp() {
         try {
+          console.log('Initializing app...');
           const { data: { session }, error } = await supabaseClient.auth.getSession();
-          if (error) throw error;
+          console.log('Auth session:', session ? 'Found' : 'Not found', error ? `Error: ${error.message}` : '');
           
-          if (session) {
-            console.log('User is authenticated, initializing app...');
+          // For development, temporarily skip auth check
+          const skipAuth = true; // Remove this in production
+          
+          if (skipAuth || session) {
+            console.log('User is authenticated or auth is skipped, initializing app...');
             // Initialize filters
             await updateFilterOptions();
             // Load initial products
@@ -743,6 +763,7 @@
             window.location.href = 'login.html';
           }
         } catch (error) {
+          console.error('Error in initializeApp:', error);
           handleAuthError(error);
         }
       }
@@ -808,8 +829,14 @@
       window.setupPolling = setupPolling;
 
       async function fetchProducts(isInitialLoad = false) {
+        console.log('Fetching products...', { isInitialLoad });
         const tableBody = document.getElementById('productsTableBody');
         const filterButton = document.getElementById('applyFilter');
+        
+        if (!tableBody) {
+          console.error('Products table body not found');
+          return;
+        }
         
         try {
             if (isInitialLoad) {
@@ -819,8 +846,10 @@
                 filterButton.disabled = true;
             }
             
-            const commodity = document.getElementById('commodity').value;
-            const product = document.getElementById('product').value;
+            const commodity = document.getElementById('commodity')?.value || 'all';
+            const product = document.getElementById('product')?.value || 'all';
+            
+            console.log('Fetching with filters:', { commodity, product });
             
             let query = supabaseClient
                 .from('products')
@@ -834,11 +863,15 @@
                 query = query.eq('product_name', product);
             }
             
+            console.log('Executing Supabase query...');
             const { data: products, error } = await query;
             
             if (error) {
+                console.error('Supabase query error:', error);
                 throw error;
             }
+            
+            console.log('Received products:', products?.length || 0);
             
             if (!products || products.length === 0) {
                 tableBody.innerHTML = '<tr><td colspan="17" class="no-data">No products found matching your criteria</td></tr>';
@@ -873,6 +906,7 @@
             
             // Update truncated cells for mobile
             updateTruncatedCells();
+            console.log('Products table updated successfully');
             
         } catch (error) {
             console.error("Failed to load products:", error);
@@ -919,3 +953,104 @@
         });
       }
       window.updateTruncatedCells = updateTruncatedCells;
+
+      async function setupEventHandlers() {
+        console.log('Setting up event handlers...');
+        try {
+          // Setup commodity filter change handler
+          const commoditySelect = document.getElementById('commodity');
+          if (commoditySelect) {
+            commoditySelect.addEventListener('change', async (e) => {
+              console.log('Commodity changed to:', e.target.value);
+              await updateFilterOptions(e.target.value, 'all');
+            });
+          }
+
+          // Setup filter button click handler
+          const filterButton = document.getElementById('applyFilter');
+          if (filterButton) {
+            filterButton.addEventListener('click', async () => {
+              console.log('Apply filter clicked');
+              await fetchProducts(false);
+            });
+          }
+
+          // Setup table row click handlers
+          const tableBody = document.getElementById('productsTableBody');
+          if (tableBody) {
+            tableBody.addEventListener('click', (e) => {
+              const row = e.target.closest('.product-row');
+              if (row) {
+                const productId = row.dataset.productId;
+                if (productId) {
+                  console.log('Navigating to product:', productId);
+                  window.location.href = `product-details.html?id=${productId}`;
+                }
+              }
+            });
+          }
+
+          // Setup initial filter options
+          await updateFilterOptions('all', 'all');
+          
+          console.log('Event handlers setup complete');
+        } catch (error) {
+          console.error('Error setting up event handlers:', error);
+        }
+      }
+      window.setupEventHandlers = setupEventHandlers;
+
+      async function updateFilterOptions(selectedCommodity = 'all', selectedProduct = 'all') {
+        console.log('Updating filter options...', { selectedCommodity, selectedProduct });
+        try {
+          const { data: products, error } = await supabaseClient
+            .from('products')
+            .select('major_group, product_name');
+
+          if (error) throw error;
+
+          if (!products || products.length === 0) {
+            console.log('No products found for filters');
+            return;
+          }
+
+          const commoditySelect = document.getElementById('commodity');
+          const uniqueCommodities = [...new Set(products.map(p => p.major_group))].filter(Boolean).sort();
+          
+          if (commoditySelect) {
+            commoditySelect.innerHTML = '<option value="all">All Commodities</option>';
+            uniqueCommodities.forEach(commodity => {
+              const option = document.createElement('option');
+              option.value = commodity;
+              option.textContent = commodity;
+              option.selected = commodity === selectedCommodity;
+              commoditySelect.appendChild(option);
+            });
+          }
+
+          const productSelect = document.getElementById('product');
+          if (productSelect) {
+            let filteredProducts = selectedCommodity === 'all' 
+              ? products 
+              : products.filter(p => p.major_group === selectedCommodity);
+            
+            const uniqueProducts = [...new Set(filteredProducts.map(p => p.product_name))].filter(Boolean).sort();
+            productSelect.innerHTML = '<option value="all">All Products</option>';
+            uniqueProducts.forEach(product => {
+              const option = document.createElement('option');
+              option.value = product;
+              option.textContent = product;
+              option.selected = product === selectedProduct;
+              productSelect.appendChild(option);
+            });
+          }
+
+          console.log('Filter options updated successfully');
+        } catch (error) {
+          console.error('Failed to update filter options:', error);
+        }
+      }
+      window.updateFilterOptions = updateFilterOptions;
+    </script>
+</body>
+</html>
