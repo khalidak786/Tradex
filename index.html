@@ -711,10 +711,22 @@
             const urlParams = new URLSearchParams(window.location.search);
             
             if (urlParams.get('error')) {
-                console.error('Auth Error:', urlParams.get('error_description'));
-                alert('Authentication failed. Please try again.');
+                const errorDescription = urlParams.get('error_description');
+                console.error('Auth Error:', errorDescription);
+                alert(`Authentication failed: ${errorDescription || 'Please try again'}`);
                 // Clear error params from URL
                 window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+            }
+
+            // Also check hash fragment for errors
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            if (hashParams.get('error')) {
+                const errorDescription = hashParams.get('error_description');
+                console.error('Auth Error in hash:', errorDescription);
+                alert(`Authentication failed: ${errorDescription || 'Please try again'}`);
+                // Clear hash
+                window.location.hash = '';
                 return;
             }
 
@@ -760,10 +772,7 @@
             });
 
             // Check if we're handling a redirect
-            const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            const queryParams = new URLSearchParams(window.location.search);
-            
-            if (hashParams.get('access_token') || queryParams.get('code')) {
+            if (window.location.hash || window.location.search) {
                 console.log('Handling auth redirect...');
             }
 
@@ -779,16 +788,16 @@
 
             googleAuth.addEventListener('click', async () => {
                 try {
-                    // Use the homepage as the redirect URL to avoid 404
-                    const redirectUrl = 'https://login.igaptrading.com/';
+                    // Use absolute URL for dashboard redirect
+                    const redirectUrl = 'https://login.igaptrading.com/dashboard.html';
                     const { data, error } = await supabaseClient.auth.signInWithOAuth({
                         provider: 'google',
                         options: {
                             redirectTo: redirectUrl,
                             skipBrowserRedirect: false,
                             queryParams: {
-                                prompt: 'select_account',
-                                access_type: 'online'
+                                access_type: 'offline',
+                                prompt: 'consent'
                             }
                         }
                     });
