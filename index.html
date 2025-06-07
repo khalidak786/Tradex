@@ -743,7 +743,7 @@
           const { data, error } = await supabaseClient.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: `${window.location.origin}/dashboard.html`,
+              redirectTo: `${window.location.origin}/Tradex/dashboard.html`,
               queryParams: {
                 access_type: 'offline',
                 prompt: 'consent'
@@ -791,10 +791,10 @@
           
           if (event === 'SIGNED_IN') {
             console.log('User signed in, redirecting to dashboard...');
-            window.location.href = '/dashboard.html';
+            window.location.replace('./dashboard.html');
           } else if (event === 'SIGNED_OUT') {
             console.log('User signed out, redirecting...');
-            window.location.href = '/';
+            window.location.replace('./index.html');
           }
         });
       }
@@ -810,7 +810,7 @@
           
           if (session) {
             console.log('User is authenticated, redirecting to dashboard...');
-            window.location.href = '/dashboard.html';
+            window.location.replace('./dashboard.html');
             return;
           }
         } catch (error) {
