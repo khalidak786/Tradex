@@ -821,8 +821,12 @@
       window.initializeApp = initializeApp;
 
       // Call initialize when the page loads
-      document.addEventListener('DOMContentLoaded', () => {
-        initializeApp();
+      document.addEventListener('DOMContentLoaded', async () => {
+        await initializeApp();
+        // After initialization, fetch products
+        await fetchProducts(true);
+        // Set up polling for updates
+        setupPolling();
       });
 
       async function handleAuthError(error) {
@@ -901,6 +905,17 @@
             const product = document.getElementById('product')?.value || 'all';
             
             console.log('Fetching with filters:', { commodity, product });
+
+            // Get current session to check authentication
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                console.log('No active session, showing message...');
+                tableBody.innerHTML = '<tr><td colspan="17" class="no-data">Please sign in to view products</td></tr>';
+                if (filterButton) {
+                    filterButton.disabled = true;
+                }
+                return;
+            }
             
             let query = supabaseClient
                 .from('products')
