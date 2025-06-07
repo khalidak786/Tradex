@@ -336,10 +336,19 @@
             font-size: 1.1rem;
             max-width: 200px;
             white-space: nowrap;
-            overflow: visible; /* Changed from hidden to visible to ensure tooltips are displayed */
+            overflow: visible;
             text-overflow: ellipsis;
             background: white;
-            position: relative; /* Ensure proper tooltip positioning */
+            position: relative;
+        }
+
+        .product-row {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .product-row:hover {
+            background-color: #f8f9fa;
         }
 
         footer {
@@ -592,23 +601,15 @@
         <section class="filter-section">
         <form class="filter-form">
             <div class="filter-group">
-                <label for="commodity">Commodity</label>
-                <select id="commodity" name="commodity">
+                <label for="commodityFilter">Commodity</label>
+                <select id="commodityFilter" name="commodity">
                     <option value="all">All Commodities</option>
-                    <option value="Aluminum">Aluminum</option>
-                    <option value="Copper">Copper</option>
-                    <option value="Iron">Iron</option>
-                    <option value="Steel">Steel</option>
                 </select>
             </div>
             <div class="filter-group">
-                <label for="product">Product</label>
-                <select id="product" name="product">
+                <label for="productFilter">Product</label>
+                <select id="productFilter" name="product">
                     <option value="all">All Products</option>
-                    <option value="Angle">Angle</option>
-                    <option value="Beam">Beam</option>
-                    <option value="Coil">Coil</option>
-                    <option value="Plate">Plate</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -714,7 +715,6 @@
             detectSessionInUrl: true,
             storage: window.localStorage,
             storageKey: 'tradex-auth',
-            storageKey: 'tradex-auth',
             flowType: 'pkce'
           }
         }
@@ -744,13 +744,29 @@
         try {
           console.log('Initializing app...');
           
-          // Set up guest mode
+          // Check for active session first, before any other initialization
+          const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+          
+          if (sessionError) {
+            console.error('Session error:', sessionError);
+            await cleanupAuth();
+            return;
+          }
+
+          // If no session, redirect to login immediately
+          if (!session?.user) {
+            console.log('No active session found, redirecting to login');
+            window.location.href = '/login.html?login=true';
+            return;
+          }
+
+          // Set up guest mode first - this should always be available
           setupGuestMode();
           
-          // Set up event handlers
+          // Set up event handlers only if we have a valid session
           await setupEventHandlers();
-          
-          // Load initial products
+
+          // Load initial products - allow guest access
           await fetchProducts(true);
           
           // Set up polling for updates
@@ -758,7 +774,7 @@
           
         } catch (error) {
           console.error('Error in initializeApp:', error);
-          alert('Error loading products. Please try refreshing the page.');
+          await handleAuthError(error);
         }
       }
       window.initializeApp = initializeApp;
@@ -770,30 +786,43 @@
         console.error('Auth error:', error);
         try {
             // First try to refresh the session
-            if (error.message?.includes('JWT') || error.message?.includes('token')) {
+            if (error.message?.includes('JWT') || error.message?.includes('token') || error.status === 401) {
                 console.log('Attempting to refresh session...');
                 const { data, error: refreshError } = await supabaseClient.auth.refreshSession();
                 if (!refreshError && data?.session) {
                     console.log('Session refreshed successfully');
+                    // Retry the last operation by reloading the products
+                    await fetchProducts(false);
                     return;
                 }
             }
-            // If refresh fails or for other errors, clean up and sign out
-            localStorage.removeItem('tradex-auth');
-            sessionStorage.removeItem('tradex-auth');
-            await supabaseClient.auth.signOut();
+
+            // If refresh fails or for other errors, clean up and redirect to login
+            await cleanupAuth();
+            
         } catch (e) {
             console.error('Error during auth cleanup:', e);
+            await cleanupAuth();
         }
-        let errorMessage = error.message || 'Authentication failed';
-        if (error.message?.includes('exchange external code')) {
-            errorMessage = 'Unable to complete sign in. Please try again.';
-        }
-        alert(errorMessage);
-        window.history.replaceState({}, document.title, '/');
-        window.location.reload();
       }
-      window.handleAuthError = handleAuthError;
+
+      async function cleanupAuth() {
+        try {
+            // Clean up storage
+            localStorage.removeItem('tradex-auth');
+            sessionStorage.removeItem('tradex-auth');
+            
+            // Sign out from Supabase
+            await supabaseClient.auth.signOut();
+            
+            // Redirect to login page with login parameter
+            window.location.href = '/login.html?login=true';
+        } catch (error) {
+            console.error('Error during cleanup:', error);
+            // Force reload as last resort
+            window.location.reload();
+        }
+      }
 
       function setupPolling() {
         if (pollingInterval) {
@@ -831,33 +860,19 @@
       window.setupPolling = setupPolling;
 
       async function fetchProducts(isInitialLoad = false) {
-        console.log('Fetching products...', { isInitialLoad });
         const tableBody = document.getElementById('productsTableBody');
-        const filterButton = document.getElementById('applyFilter');
-        
-        if (!tableBody) {
-          console.error('Products table body not found');
-          return;
-        }
-        
+        if (!tableBody) return;
+
         try {
-            if (isInitialLoad) {
-                tableBody.innerHTML = '<tr><td colspan="17" class="loading">Loading products...</td></tr>';
-            }
-            if (filterButton) {
-                filterButton.disabled = true;
-            }
-            
-            const commodity = document.getElementById('commodity')?.value || 'all';
-            const product = document.getElementById('product')?.value || 'all';
-            
-            console.log('Fetching with filters:', { commodity, product });
-            
+            // Check session state first, but don't block on it
             const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
             if (sessionError) {
-                console.error('Session error:', sessionError);
-                throw sessionError;
+                console.warn('Session warning:', sessionError);
+                // Continue anyway - we'll let Supabase handle unauthorized responses
             }
+
+            const commodity = document.getElementById('commodityFilter')?.value || 'all';
+            const product = document.getElementById('productFilter')?.value || 'all';
             
             let query = supabaseClient
                 .from('products')
@@ -876,6 +891,11 @@
             
             if (error) {
                 console.error('Supabase query error:', error);
+                // Only redirect to login if we get an auth error and we're not in guest mode
+                if (error.status === 401 && !isInitialLoad) {
+                    window.location.href = '/login.html';
+                    return;
+                }
                 throw error;
             }
             
@@ -885,52 +905,18 @@
                 tableBody.innerHTML = '<tr><td colspan="17" class="no-data">No products found matching your criteria</td></tr>';
                 return;
             }
-            
-            // Update data hash for polling comparison
-            lastDataHash = calculateDataHash(products);
-            
-            // Render the products
-            tableBody.innerHTML = products.map(product => `
-                <tr class="product-row" data-product-id="${product.product_id}" style="cursor: pointer;">
-                    <td>${createCell(product.major_group)}</td>
-                    <td>${createCell(product.quote_id)}</td>
-                    <td>${createCell(product.product_id)}</td>
-                    <td>${createCell(product.product_name)}</td>
-                    <td>${createCell(product.description)}</td>
-                    <td>${createCell(product.origin)}</td>
-                    <td>${createCell(product.quality_grade)}</td>
-                    <td>${product.quantity ? product.quantity.toLocaleString() : '0'}</td>
-                    <td>${product.price ? product.price.toLocaleString() : '0'}</td>
-                    <td>${(product.quantity && product.price) ? (product.quantity * product.price).toLocaleString() : '0'}</td>
-                    <td>${createCell(product.margin_required)}</td>
-                    <td>${createCell(product.packing)}</td>
-                    <td>${createCell(product.delivery_terms)}</td>
-                    <td>${createCell(product.payment_terms)}</td>
-                    <td>${createCell(product.general_tc)}</td>
-                    <td>${createCell(product.documents)}</td>
-                    <td>${createCell(product.remarks)}</td>
-                </tr>
-            `).join('');
-            
-            // Update truncated cells for mobile
-            updateTruncatedCells();
-            console.log('Products table updated successfully');
-            
-        } catch (error) {
-            console.error("Failed to load products:", error);
-            if (error.message?.includes('JWT')) {
-                // Handle auth error
-                window.location.replace(window.location.origin + '/login.html');
-                return;
+
+            // Update the data hash for polling
+            const newHash = calculateDataHash(products);
+            if (newHash !== lastDataHash) {
+                lastDataHash = newHash;
+                displayProducts(products);
             }
-            tableBody.innerHTML = `
-                <tr><td colspan="17" class="error">
-                    Error loading products: ${error.message || 'Unknown error'}
-                </td></tr>
-            `;
-        } finally {
-            if (filterButton) {
-                filterButton.disabled = false;
+
+        } catch (error) {
+            console.error('Failed to load products:', error);
+            if (!isInitialLoad) {
+                tableBody.innerHTML = '<tr><td colspan="17" class="error">Failed to load products. Please try refreshing the page.</td></tr>';
             }
         }
       }
@@ -967,15 +953,57 @@
       }
       window.updateTruncatedCells = updateTruncatedCells;
 
+      // Function to display products in the table
+      function displayProducts(products) {
+        const tableBody = document.getElementById('productsTableBody');
+        if (!tableBody) return;
+
+        let html = '';
+        products.forEach(product => {
+          html += `
+            <tr class="product-row" data-product-id="${product.product_id}">
+              <td>${createCell(product.major_group)}</td>
+              <td>${createCell(product.quote_id)}</td>
+              <td>${createCell(product.product_id)}</td>
+              <td>${createCell(product.product_name)}</td>
+              <td>${createCell(product.description)}</td>
+              <td>${createCell(product.origin)}</td>
+              <td>${createCell(product.quality_grade)}</td>
+              <td>${createCell(product.quantity)}</td>
+              <td>${createCell(product.price)}</td>
+              <td>${createCell(product.quantity * product.price)}</td>
+              <td>${createCell(product.margin_required)}</td>
+              <td>${createCell(product.packing)}</td>
+              <td>${createCell(product.delivery_terms)}</td>
+              <td>${createCell(product.payment_terms)}</td>
+              <td>${createCell(product.general_tc)}</td>
+              <td>${createCell(product.documents)}</td>
+              <td>${createCell(product.remarks)}</td>
+            </tr>`;
+        });
+        
+        tableBody.innerHTML = html;
+        setupMobileTooltips();
+      }
+      window.displayProducts = displayProducts;
+
       async function setupEventHandlers() {
         console.log('Setting up event handlers...');
         try {
           // Setup commodity filter change handler
-          const commoditySelect = document.getElementById('commodity');
+          const commoditySelect = document.getElementById('commodityFilter');
           if (commoditySelect) {
             commoditySelect.addEventListener('change', async (e) => {
               console.log('Commodity changed to:', e.target.value);
               await updateFilterOptions(e.target.value, 'all');
+              await fetchProducts(false);
+            });
+          }
+
+          // Setup product filter change handler
+          const productSelect = document.getElementById('productFilter');
+          if (productSelect) {
+            productSelect.addEventListener('change', async () => {
               await fetchProducts(false);
             });
           }
@@ -1029,7 +1057,8 @@
             return;
           }
 
-          const commoditySelect = document.getElementById('commodity');
+          // Update commodity filter
+          const commoditySelect = document.getElementById('commodityFilter');
           const uniqueCommodities = [...new Set(products.map(p => p.major_group))].filter(Boolean).sort();
           
           if (commoditySelect) {
@@ -1043,7 +1072,8 @@
             });
           }
 
-          const productSelect = document.getElementById('product');
+          // Update product filter
+          const productSelect = document.getElementById('productFilter');
           if (productSelect) {
             let filteredProducts = selectedCommodity === 'all' 
               ? products 

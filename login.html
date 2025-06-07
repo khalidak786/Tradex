@@ -113,7 +113,9 @@
             <div class="tagline">Live Commodity Prices, Live Trade</div>
         </div>
         
-        <form id="profileForm">
+        <div id="loading" class="loading">Processing authentication...</div>
+        
+        <form id="profileForm" style="display: none;">
             <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" disabled>
@@ -154,7 +156,17 @@
 
         const supabaseClient = createClient(
             'https://xuackwkjvjjdqjmisqlk.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWNrd2tqdmpqZHFqbWlzcWxrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDI5NjIsImV4cCI6MjA2NDM3ODk2Mn0.qt2VSui1WWWjmJRGbQeyqggYYIG2rYRKAO1ICHjxdzk'
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWNrd2tqdmpqZHFqbWlzcWxrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDI5NjIsImV4cCI6MjA2NDM3ODk2Mn0.qt2VSui1WWWjmJRGbQeyqggYYIG2rYRKAO1ICHjxdzk',
+            {
+                auth: {
+                    persistSession: true,
+                    autoRefreshToken: true,
+                    detectSessionInUrl: true,
+                    storage: window.localStorage,
+                    storageKey: 'tradex-auth',
+                    flowType: 'pkce'
+                }
+            }
         );
 
         // Function to get URL parameters
@@ -184,24 +196,80 @@
         // Initialize form with email from URL
         async function initializeForm() {
             try {
-                const { data: { session }, error } = await supabaseClient.auth.getSession();
-                if (error) throw error;
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('profileForm').style.display = 'none';
+                document.getElementById('loading').textContent = 'Processing authentication...';
 
+                // First check if we have auth parameters in the URL
+                const hasAuthParams = window.location.hash.includes('access_token') || 
+                                    window.location.hash.includes('error') || 
+                                    window.location.hash.includes('type=recovery');
+
+                if (hasAuthParams) {
+                    console.log('Auth redirect detected, processing...');
+                    // Let Supabase process the auth parameters
+                    const { data, error } = await supabaseClient.auth.getSession();
+                    
+                    if (error) {
+                        console.error('Error processing auth redirect:', error);
+                        document.getElementById('loading').textContent = 'Authentication failed. Please try again.';
+                        return;
+                    }
+
+                    // Give extra time for session to be established
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+
+                // Now check the session
+                const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+                
+                if (sessionError) {
+                    console.error('Session error:', sessionError);
+                    document.getElementById('loading').textContent = 'Session error. Please try again.';
+                    return;
+                }
+
+                // If we're on login page with no session
                 if (!session?.user) {
+                    if (hasAuthParams) {
+                        document.getElementById('loading').textContent = 'Authentication failed. Please try again.';
+                    } else {
+                        // Check if we were redirected from index.html
+                        const loginParam = new URLSearchParams(window.location.search).get('login');
+                        document.getElementById('loading').textContent = loginParam ? 
+                            'Please sign in to continue.' : 
+                            'Checking authentication...';
+                    }
+                    return;
+                }
+
+                // We have a valid session
+                console.log('Session found, checking profile status');
+                const emailInput = document.getElementById('email');
+                emailInput.value = session.user.email;
+
+                // Check if the user has already completed their profile
+                if (session.user.user_metadata?.full_name && 
+                    session.user.user_metadata?.phone && 
+                    session.user.user_metadata?.address) {
+                    console.log('Profile already complete, redirecting to index');
                     window.location.href = '/index.html';
                     return;
                 }
 
-                const emailInput = document.getElementById('email');
-                emailInput.value = session.user.email;
+                // Show the profile form if profile is incomplete
+                console.log('Profile incomplete, showing form');
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('profileForm').style.display = 'block';
 
                 // Pre-fill name if available
                 if (session.user.user_metadata?.full_name) {
                     document.getElementById('fullName').value = session.user.user_metadata.full_name;
                 }
+
             } catch (error) {
                 console.error('Error initializing form:', error);
-                window.location.href = '/index.html';
+                document.getElementById('loading').textContent = 'An error occurred. Please try again.';
             }
         }
 
