@@ -197,39 +197,42 @@
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/+esm'
 
         const redirectUrl = 'https://login.igaptrading.com/login.html';
-
+        
         // Create Supabase client with modified auth settings
         const supabaseClient = createClient(
             'https://xuackwkjvjjdqjmisqlk.supabase.co',
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWNrd2tqdmpqZHFqbWlzcWxrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDI5NjIsImV4cCI6MjA2NDM3ODk2Mn0.qt2VSui1WWWjmJRGbQeyqggYYIG2rYRKAO1ICHjxdzk',
             {
                 auth: {
-                    persistSession: true,
+                    persistSession: false, // Don't persist until we verify
                     autoRefreshToken: true,
-                    detectSessionInUrl: true, // Enable auto-detection since we're handling the domain properly now
-                    storage: window.localStorage,
+                    detectSessionInUrl: false, // Handle manually
+                    storage: window.sessionStorage, // Use session storage instead
                     storageKey: 'tradex-auth',
-                    flowType: 'pkce',
-                    redirectTo: redirectUrl
+                    flowType: 'pkce'
                 }
             }
         );
 
-        // Function to get URL parameters
-        function getURLParameter(name) {
-            const params = new URLSearchParams(window.location.search);
-            return params.get(name);
+        // Function to get hash parameters
+        function getHashParams() {
+            const hash = window.location.hash.substring(1);
+            return Object.fromEntries(
+                hash.split('&')
+                    .filter(Boolean)
+                    .map(param => param.split('='))
+            );
         }
 
         // Function to check for auth hash parameters
         function hasAuthParams() {
-            // Look for specific auth-related parameters in the URL hash
-            const hash = window.location.hash;
-            return hash.includes('access_token') || 
-                   hash.includes('error_description') || 
-                   hash.includes('error') || 
-                   hash.includes('type=recovery') ||
-                   hash.includes('type=invite');
+            const hashParams = getHashParams();
+            console.log('Hash parameters:', hashParams);
+            return hashParams.access_token || 
+                   hashParams.error_description || 
+                   hashParams.error || 
+                   hashParams.type === 'recovery' ||
+                   hashParams.type === 'invite';
         }
 
         // Function to validate phone number
@@ -253,34 +256,67 @@
         // Initialize form with email from URL
         async function initializeForm() {
             try {
+                console.log('Initializing form...');
+                console.log('Current URL:', window.location.href);
+                
                 document.getElementById('loading').style.display = 'block';
                 document.getElementById('profileForm').style.display = 'none';
                 document.getElementById('authContainer').style.display = 'none';
                 document.getElementById('loading').textContent = 'Checking authentication status...';
 
-                // First handle auth redirect if present
+                // Check for auth redirect
                 if (hasAuthParams()) {
-                    console.log('Auth redirect detected, handling...');
+                    console.log('Auth redirect detected, processing...');
                     document.getElementById('loading').textContent = 'Processing authentication...';
 
                     try {
-                        // Let Supabase handle the auth callback since detectSessionInUrl is true
-                        const { data: { session }, error } = await supabaseClient.auth.getSession();
+                        // Get auth parameters
+                        const hashParams = getHashParams();
+                        console.log('Processing auth parameters:', hashParams);
+
+                        // Set session from hash params
+                        const { data, error } = await supabaseClient.auth.setSession({
+                            access_token: hashParams.access_token,
+                            refresh_token: hashParams.refresh_token
+                        });
+
                         if (error) throw error;
-                        
+                        console.log('Session set successfully:', data);
+
+                        // Clear hash without causing reload
+                        if (window.history.replaceState) {
+                            window.history.replaceState(null, null, window.location.pathname);
+                        }
+
+                        // Get updated session
+                        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+                        if (sessionError) throw sessionError;
+
                         if (!session) {
                             throw new Error('No session after auth redirect');
                         }
 
-                        // Clear the URL hash after processing to prevent reprocessing
-                        if (window.history.replaceState) {
-                            window.history.replaceState(null, null, window.location.pathname);
-                        } else {
-                            window.location.hash = '';
-                        }
+                        console.log('Valid session obtained:', session);
                         
+                        // Check if profile is complete
+                        if (!session.user.user_metadata?.full_name || 
+                            !session.user.user_metadata?.phone || 
+                            !session.user.user_metadata?.address) {
+                            console.log('Profile incomplete, showing form');
+                            const emailInput = document.getElementById('email');
+                            emailInput.value = session.user.email;
+                            document.getElementById('loading').style.display = 'none';
+                            document.getElementById('profileForm').style.display = 'block';
+                            return;
+                        }
+
+                        console.log('Profile complete, should stay on login page');
+                        // Don't redirect automatically, let user interact
+                        document.getElementById('loading').textContent = 'Authentication successful!';
+                        return;
+
                     } catch (error) {
-                        console.error('Auth redirect processing error:', error);
+                        console.error('Auth processing error:', error);
                         document.getElementById('loading').textContent = 'Authentication failed. Please try again.';
                         document.getElementById('loading').style.display = 'none';
                         document.getElementById('authContainer').style.display = 'block';
@@ -288,51 +324,34 @@
                     }
                 }
 
-                // Check current session state
+                // Check existing session
                 const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-                
-                if (sessionError) {
-                    console.error('Session error:', sessionError);
-                    document.getElementById('loading').textContent = 'Session error. Please try again.';
+                console.log('Existing session check:', session, sessionError);
+
+                if (sessionError || !session) {
+                    console.log('No existing session, showing auth options');
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('authContainer').style.display = 'block';
                     return;
                 }
 
-                if (!session?.user) {
-                    // No valid session, show auth container
-                    console.log('No session, showing auth options');
+                // We have a session but no auth params - check profile
+                console.log('Session exists, checking profile');
+                if (!session.user.user_metadata?.full_name || 
+                    !session.user.user_metadata?.phone || 
+                    !session.user.user_metadata?.address) {
+                    console.log('Profile incomplete, showing form');
+                    const emailInput = document.getElementById('email');
+                    emailInput.value = session.user.email;
                     document.getElementById('loading').style.display = 'none';
-                    document.getElementById('authContainer').style.display = 'block';
-                    return;
-                }
-
-                // We have a valid session
-                console.log('Session found, checking profile status');
-                const emailInput = document.getElementById('email');
-                emailInput.value = session.user.email;
-
-                // Check if profile is complete
-                if (session.user.user_metadata?.full_name && 
-                    session.user.user_metadata?.phone && 
-                    session.user.user_metadata?.address) {
-                    console.log('Profile complete, redirecting to index');
-                    window.location.href = '/index.html';
-                    return;
-                }
-
-                // Show profile form for incomplete profiles
-                console.log('Profile incomplete, showing form');
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('profileForm').style.display = 'block';
-
-                // Pre-fill name if available
-                if (session.user.user_metadata?.full_name) {
-                    document.getElementById('fullName').value = session.user.user_metadata.full_name;
+                    document.getElementById('profileForm').style.display = 'block';
+                } else {
+                    console.log('Profile complete, staying on page');
+                    document.getElementById('loading').textContent = 'Authentication successful!';
                 }
 
             } catch (error) {
-                console.error('Error initializing form:', error);
+                console.error('Initialization error:', error);
                 document.getElementById('loading').textContent = 'An error occurred. Please try again.';
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('authContainer').style.display = 'block';
@@ -391,8 +410,11 @@
                 
                 if (error) throw error;
                 
-                // Redirect to main page
-                window.location.href = '/index.html';
+                // Show success message and delay redirect
+                document.getElementById('loading').textContent = 'Profile updated successfully!';
+                setTimeout(() => {
+                    window.location.href = '/index.html';
+                }, 1000);
                 
             } catch (error) {
                 console.error('Error updating profile:', error);
@@ -402,26 +424,32 @@
             }
         });
 
-        // Add sign-in handlers
+        // Add sign-in handlers with logging
         document.getElementById('googleSignIn').addEventListener('click', async () => {
             try {
-                const { error } = await supabaseClient.auth.signInWithOAuth({
+                console.log('Initiating Google sign-in...');
+                const { data, error } = await supabaseClient.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
-                        redirectTo: redirectUrl
+                        redirectTo: redirectUrl,
+                        queryParams: {
+                            prompt: 'select_account'
+                        }
                     }
                 });
                 
                 if (error) throw error;
+                console.log('Google sign-in initiated:', data);
             } catch (error) {
-                console.error('Google sign in error:', error);
-                alert('Failed to initiate Google sign in. Please try again.');
+                console.error('Google sign-in error:', error);
+                alert('Failed to initiate Google sign-in. Please try again.');
             }
         });
 
         document.getElementById('githubSignIn').addEventListener('click', async () => {
             try {
-                const { error } = await supabaseClient.auth.signInWithOAuth({
+                console.log('Initiating GitHub sign-in...');
+                const { data, error } = await supabaseClient.auth.signInWithOAuth({
                     provider: 'github',
                     options: {
                         redirectTo: redirectUrl
@@ -429,9 +457,10 @@
                 });
                 
                 if (error) throw error;
+                console.log('GitHub sign-in initiated:', data);
             } catch (error) {
-                console.error('GitHub sign in error:', error);
-                alert('Failed to initiate GitHub sign in. Please try again.');
+                console.error('GitHub sign-in error:', error);
+                alert('Failed to initiate GitHub sign-in. Please try again.');
             }
         });
 
