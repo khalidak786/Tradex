@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Tradex - Complete Your Profile</title>
+    <title>Welcome to Tradex - Sign In</title>
     <style>
         * {
             margin: 0;
@@ -104,6 +104,38 @@
             padding: 20px;
             color: #7f8c8d;
         }
+
+        .auth-container {
+            display: none;
+            text-align: center;
+        }
+
+        .auth-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin: 10px 0;
+            width: 100%;
+        }
+
+        .auth-button:hover {
+            background-color: #e67e22;
+        }
+
+        .auth-button img {
+            width: 24px;
+            height: 24px;
+        }
     </style>
 </head>
 <body>
@@ -114,6 +146,18 @@
         </div>
         
         <div id="loading" class="loading">Processing authentication...</div>
+
+        <div id="authContainer" class="auth-container">
+            <p style="margin-bottom: 20px; color: #666;">Sign in to access your account and manage your trades</p>
+            <button id="googleSignIn" class="auth-button">
+                <img src="https://www.google.com/favicon.ico" alt="Google" style="width: 18px; height: 18px;">
+                Sign in with Google
+            </button>
+            <button id="githubSignIn" class="auth-button" style="background-color: #333;">
+                <img src="https://github.com/favicon.ico" alt="GitHub" style="width: 18px; height: 18px;">
+                Sign in with GitHub
+            </button>
+        </div>
         
         <form id="profileForm" style="display: none;">
             <div class="form-group">
@@ -146,8 +190,6 @@
             
             <button type="submit" class="submit-button">Complete Profile</button>
         </form>
-        
-        <div id="loading" class="loading">Updating your profile...</div>
     </div>
 
     <!-- Load Supabase JS using ES modules -->
@@ -198,6 +240,7 @@
             try {
                 document.getElementById('loading').style.display = 'block';
                 document.getElementById('profileForm').style.display = 'none';
+                document.getElementById('authContainer').style.display = 'none';
                 document.getElementById('loading').textContent = 'Checking authentication status...';
 
                 // Check for auth parameters in the URL
@@ -223,6 +266,8 @@
                     if (error) {
                         console.error('Error processing auth redirect:', error);
                         document.getElementById('loading').textContent = 'Authentication failed. Please try again.';
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('authContainer').style.display = 'block';
                         return;
                     }
 
@@ -236,14 +281,15 @@
                 if (sessionError) {
                     console.error('Session error:', sessionError);
                     document.getElementById('loading').textContent = 'Session error. Please try again.';
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('authContainer').style.display = 'block';
                     return;
                 }
 
                 if (!session?.user) {
-                    // No valid session, show appropriate message
-                    document.getElementById('loading').textContent = hasAuthParams ? 
-                        'Authentication failed. Please try again.' : 
-                        'Please sign in to continue.';
+                    // No valid session, show auth options
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('authContainer').style.display = 'block';
                     return;
                 }
 
@@ -274,6 +320,8 @@
             } catch (error) {
                 console.error('Error initializing form:', error);
                 document.getElementById('loading').textContent = 'An error occurred. Please try again.';
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('authContainer').style.display = 'block';
             }
         }
 
@@ -337,6 +385,39 @@
                 alert('Failed to update profile. Please try again.');
                 document.getElementById('loading').style.display = 'none';
                 document.querySelector('.submit-button').disabled = false;
+            }
+        });
+
+        // Add sign-in handlers
+        document.getElementById('googleSignIn').addEventListener('click', async () => {
+            try {
+                const { error } = await supabaseClient.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin + '/login.html'
+                    }
+                });
+                
+                if (error) throw error;
+            } catch (error) {
+                console.error('Google sign in error:', error);
+                alert('Failed to initiate Google sign in. Please try again.');
+            }
+        });
+
+        document.getElementById('githubSignIn').addEventListener('click', async () => {
+            try {
+                const { error } = await supabaseClient.auth.signInWithOAuth({
+                    provider: 'github',
+                    options: {
+                        redirectTo: window.location.origin + '/login.html'
+                    }
+                });
+                
+                if (error) throw error;
+            } catch (error) {
+                console.error('GitHub sign in error:', error);
+                alert('Failed to initiate GitHub sign in. Please try again.');
             }
         });
 
