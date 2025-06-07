@@ -196,6 +196,7 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/+esm'
 
+        // Create Supabase client with modified auth settings
         const supabaseClient = createClient(
             'https://xuackwkjvjjdqjmisqlk.supabase.co',
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWNrd2tqdmpqZHFqbWlzcWxrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDI5NjIsImV4cCI6MjA2NDM3ODk2Mn0.qt2VSui1WWWjmJRGbQeyqggYYIG2rYRKAO1ICHjxdzk',
@@ -203,7 +204,7 @@
                 auth: {
                     persistSession: true,
                     autoRefreshToken: true,
-                    detectSessionInUrl: true,
+                    detectSessionInUrl: false, // Disable auto-detection
                     storage: window.localStorage,
                     storageKey: 'tradex-auth',
                     flowType: 'pkce'
@@ -215,6 +216,16 @@
         function getURLParameter(name) {
             const params = new URLSearchParams(window.location.search);
             return params.get(name);
+        }
+
+        // Function to check for auth hash parameters
+        function hasAuthParams() {
+            // Look for specific auth-related parameters in the URL hash
+            const hash = window.location.hash;
+            return hash.includes('access_token') || 
+                   hash.includes('error_description') || 
+                   hash.includes('error') || 
+                   hash.includes('type=recovery');
         }
 
         // Function to validate phone number
@@ -243,39 +254,32 @@
                 document.getElementById('authContainer').style.display = 'none';
                 document.getElementById('loading').textContent = 'Checking authentication status...';
 
-                // Check for auth parameters in the URL
-                const hasAuthParams = window.location.hash.includes('access_token') || 
-                                    window.location.hash.includes('error') || 
-                                    window.location.hash.includes('type=recovery');
-                
-                // Check if we were explicitly redirected here
-                const loginParam = new URLSearchParams(window.location.search).get('login');
-                const requiresAuth = hasAuthParams || loginParam === 'true';
+                // First handle auth redirect if present
+                if (hasAuthParams()) {
+                    console.log('Auth redirect detected, handling...');
+                    document.getElementById('loading').textContent = 'Processing authentication...';
 
-                if (!requiresAuth) {
-                    // Not an auth redirect and not explicitly sent here - redirect back to index
-                    window.location.href = '/index.html';
-                    return;
-                }
-
-                if (hasAuthParams) {
-                    console.log('Auth redirect detected, processing...');
-                    // Let Supabase process the auth parameters
-                    const { data, error } = await supabaseClient.auth.getSession();
-                    
-                    if (error) {
-                        console.error('Error processing auth redirect:', error);
+                    try {
+                        // Manually process the auth callback
+                        const { data, error } = await supabaseClient.auth.exchangeCodeForSession(window.location.href);
+                        if (error) throw error;
+                        
+                        // Clear the URL hash after processing
+                        window.location.hash = '';
+                        
+                        // Give a moment for the session to be established
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                    } catch (error) {
+                        console.error('Auth redirect processing error:', error);
                         document.getElementById('loading').textContent = 'Authentication failed. Please try again.';
                         document.getElementById('loading').style.display = 'none';
                         document.getElementById('authContainer').style.display = 'block';
                         return;
                     }
-
-                    // Give extra time for session to be established
-                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
 
-                // Now check the session
+                // Check current session state
                 const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
                 
                 if (sessionError) {
@@ -287,7 +291,8 @@
                 }
 
                 if (!session?.user) {
-                    // No valid session, show auth options
+                    // No valid session, show auth container
+                    console.log('No session, showing auth options');
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('authContainer').style.display = 'block';
                     return;
