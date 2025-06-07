@@ -740,10 +740,13 @@
       async function handleGoogleSignIn() {
         try {
           console.log('Initiating Google sign in...');
+          const redirectTo = window.location.origin + '/Tradex/dashboard.html';
+          console.log('Redirect URL:', redirectTo);
+          
           const { data, error } = await supabaseClient.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: `${window.location.origin}/Tradex/dashboard.html`,
+              redirectTo: redirectTo,
               queryParams: {
                 access_type: 'offline',
                 prompt: 'consent'
@@ -808,7 +811,8 @@
           const { data: { session }, error } = await supabaseClient.auth.getSession();
           console.log('Auth session:', session ? 'Found' : 'Not found', error ? `Error: ${error.message}` : '');
           
-          if (session) {
+          // If we're on index.html and have a valid session, redirect to dashboard
+          if (session?.user?.id && window.location.pathname.endsWith('index.html')) {
             console.log('User is authenticated, redirecting to dashboard...');
             window.location.replace('./dashboard.html');
             return;
@@ -820,10 +824,30 @@
       }
       window.initializeApp = initializeApp;
 
-      // Call initialize when the page loads
+      // Call initialize when page loads and handle hash params
       document.addEventListener('DOMContentLoaded', async () => {
+        // Check for hash params that indicate auth callback
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        
+        if (accessToken) {
+          console.log('Found access token in URL, handling auth callback...');
+          try {
+            const { data: { session }, error } = await supabaseClient.auth.getSession();
+            if (session) {
+              console.log('Session established, redirecting to dashboard...');
+              window.location.replace('./dashboard.html');
+              return;
+            }
+          } catch (error) {
+            console.error('Error checking session after callback:', error);
+          }
+        }
+
         await initializeApp();
-        // After initialization, fetch products
+        // Set up event handlers first
+        await setupEventHandlers();
+        // Then fetch products
         await fetchProducts(true);
         // Set up polling for updates
         setupPolling();
@@ -1018,6 +1042,7 @@
             commoditySelect.addEventListener('change', async (e) => {
               console.log('Commodity changed to:', e.target.value);
               await updateFilterOptions(e.target.value, 'all');
+              await fetchProducts(false);
             });
           }
 
@@ -1035,11 +1060,12 @@
           if (tableBody) {
             tableBody.addEventListener('click', (e) => {
               const row = e.target.closest('.product-row');
-              if (row) {
+              if (row && !e.target.closest('.truncate[data-tooltip]')) {
                 const productId = row.dataset.productId;
                 if (productId) {
                   console.log('Navigating to product:', productId);
-                  window.location.href = `product-details.html?id=${productId}`;
+                  e.preventDefault();
+                  window.location.href = './product-details.html?id=' + productId;
                 }
               }
             });
