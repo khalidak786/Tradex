@@ -720,7 +720,7 @@
       // Initialize Supabase client
       const supabaseClient = createClient(
         'https://xuackwkjvjjdqjmisqlk.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWNrd2tqdmpqZHFqbWlzcWxrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4MDI5NjIsImV4cCI6MjA2NDM3ODk2Mn0.qt2VSui1WWWjmJRGbQeyqggYYIG2rYRKAO1ICHjxdzk',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1YWNrd2tqdmpqZHFqbWlzcWxrIiwicm9zZSI6ImFub24iLCJpYXQiOjE3NDg4MDI5NjIsImV4cCI6MjA2NDM3ODk2Mn0.qt2VSui1WWWjmJRGbQeyqggYYIG2rYRKAO1ICHjxdzk',
         {
           auth: {
             persistSession: true,
@@ -740,13 +740,14 @@
       async function handleGoogleSignIn() {
         try {
           console.log('Initiating Google sign in...');
-          const redirectTo = window.location.origin + '/Tradex/dashboard.html';
-          console.log('Redirect URL:', redirectTo);
+          // Use absolute URL for redirect
+          const dashboardUrl = window.location.origin + '/dashboard.html';
+          console.log('Redirect URL:', dashboardUrl);
           
-          const { data, error } = await supabaseClient.auth.signInWithOAuth({
+          const { error } = await supabaseClient.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: redirectTo,
+              redirectTo: dashboardUrl,
               queryParams: {
                 access_type: 'offline',
                 prompt: 'consent'
@@ -755,8 +756,7 @@
           });
           
           if (error) throw error;
-          
-          console.log('SignIn successful:', data);
+          console.log('SignIn initiated successfully');
           
         } catch (error) {
           console.error('Error during Google sign in:', error);
@@ -789,15 +789,26 @@
         }
 
         // Auth state change listener
-        supabaseClient.auth.onAuthStateChange((event, session) => {
+        supabaseClient.auth.onAuthStateChange(async (event, session) => {
           console.log('Auth state changed:', event, 'Session:', session ? 'exists' : 'none');
           
-          if (event === 'SIGNED_IN') {
+          if (event === 'SIGNED_IN' && session?.user?.id) {
             console.log('User signed in, redirecting to dashboard...');
-            window.location.replace('./dashboard.html');
+            try {
+              // Ensure we have a valid session
+              const { data, error } = await supabaseClient.auth.getSession();
+              if (error) throw error;
+              if (data?.session) {
+                // Use absolute URL for redirection
+                window.location.replace(window.location.origin + '/dashboard.html');
+              }
+            } catch (error) {
+              console.error('Error checking session:', error);
+              handleAuthError(error);
+            }
           } else if (event === 'SIGNED_OUT') {
             console.log('User signed out, redirecting...');
-            window.location.replace('./index.html');
+            window.location.replace(window.location.origin + '/index.html');
           }
         });
       }
@@ -806,17 +817,25 @@
       async function initializeApp() {
         try {
           console.log('Initializing app...');
-          setupAuthEventListeners(); // Setup auth event listeners first
+          
+          // Clear any error parameters and fragments
+          if (window.location.search.includes('error') || window.location.hash) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
           
           const { data: { session }, error } = await supabaseClient.auth.getSession();
           console.log('Auth session:', session ? 'Found' : 'Not found', error ? `Error: ${error.message}` : '');
           
-          // If we're on index.html and have a valid session, redirect to dashboard
-          if (session?.user?.id && window.location.pathname.endsWith('index.html')) {
+          // If we have a valid session, redirect to dashboard
+          if (session?.user?.id) {
             console.log('User is authenticated, redirecting to dashboard...');
-            window.location.replace('./dashboard.html');
+            window.location.replace(window.location.origin + '/dashboard.html');
             return;
           }
+          
+          // Set up auth listeners if we're not logged in
+          setupAuthEventListeners();
+          
         } catch (error) {
           console.error('Error in initializeApp:', error);
           handleAuthError(error);
