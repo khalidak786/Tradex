@@ -90,10 +90,10 @@
 
         let isRedirecting = false;
 
-        // Check authentication status when page loads
-        document.addEventListener('DOMContentLoaded', async () => {
+        // Check authentication status immediately and set up listener
+        async function checkAndUpdateSession() {
             try {
-                console.log('Initializing authentication check...');
+                console.log('Checking authentication status...');
                 
                 // Get the current session
                 const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
@@ -108,6 +108,7 @@
                     console.log('No valid session found, redirecting to login...');
                     if (!isRedirecting) {
                         isRedirecting = true;
+                        localStorage.removeItem('supabase.auth.token');
                         window.location.replace('./index.html');
                     }
                     return;
@@ -121,23 +122,24 @@
                     ${user.user_metadata.full_name ? `<p>Name: ${user.user_metadata.full_name}</p>` : ''}
                 `;
 
-                // Handle auth state changes
-                supabaseClient.auth.onAuthStateChange((event, _session) => {
-                    console.log('Auth state changed:', event);
-                    if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-                        if (!isRedirecting) {
-                            isRedirecting = true;
-                            window.location.replace('./index.html');
-                        }
-                    }
-                });
-
             } catch (error) {
                 console.error('Error checking auth status:', error.message);
                 if (!isRedirecting) {
                     isRedirecting = true;
+                    localStorage.removeItem('supabase.auth.token');
                     window.location.replace('./index.html');
                 }
+            }
+        }
+
+        // Check session when page loads
+        document.addEventListener('DOMContentLoaded', checkAndUpdateSession);
+
+        // Handle auth state changes
+        supabaseClient.auth.onAuthStateChange((event, _session) => {
+            console.log('Auth state changed:', event);
+            if (event === 'SIGNED_OUT' || event === 'USER_DELETED' || event === 'TOKEN_REFRESHED') {
+                checkAndUpdateSession();
             }
         });
 
@@ -146,6 +148,7 @@
             try {
                 if (!isRedirecting) {
                     isRedirecting = true;
+                    localStorage.removeItem('supabase.auth.token');
                     await supabaseClient.auth.signOut();
                     window.location.replace('./index.html');
                 }
@@ -153,6 +156,7 @@
                 console.error('Error during sign out:', error);
                 if (!isRedirecting) {
                     isRedirecting = true;
+                    localStorage.removeItem('supabase.auth.token');
                     window.location.replace('./index.html');
                 }
             }

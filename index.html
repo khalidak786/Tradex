@@ -905,17 +905,6 @@
             const product = document.getElementById('product')?.value || 'all';
             
             console.log('Fetching with filters:', { commodity, product });
-
-            // Get current session to check authentication
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (!session) {
-                console.log('No active session, showing message...');
-                tableBody.innerHTML = '<tr><td colspan="17" class="no-data">Please sign in to view products</td></tr>';
-                if (filterButton) {
-                    filterButton.disabled = true;
-                }
-                return;
-            }
             
             let query = supabaseClient
                 .from('products')
