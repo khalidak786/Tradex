@@ -198,12 +198,22 @@
             try {
                 document.getElementById('loading').style.display = 'block';
                 document.getElementById('profileForm').style.display = 'none';
-                document.getElementById('loading').textContent = 'Processing authentication...';
+                document.getElementById('loading').textContent = 'Checking authentication status...';
 
-                // First check if we have auth parameters in the URL
+                // Check for auth parameters in the URL
                 const hasAuthParams = window.location.hash.includes('access_token') || 
                                     window.location.hash.includes('error') || 
                                     window.location.hash.includes('type=recovery');
+                
+                // Check if we were explicitly redirected here
+                const loginParam = new URLSearchParams(window.location.search).get('login');
+                const requiresAuth = hasAuthParams || loginParam === 'true';
+
+                if (!requiresAuth) {
+                    // Not an auth redirect and not explicitly sent here - redirect back to index
+                    window.location.href = '/index.html';
+                    return;
+                }
 
                 if (hasAuthParams) {
                     console.log('Auth redirect detected, processing...');
@@ -229,17 +239,11 @@
                     return;
                 }
 
-                // If we're on login page with no session
                 if (!session?.user) {
-                    if (hasAuthParams) {
-                        document.getElementById('loading').textContent = 'Authentication failed. Please try again.';
-                    } else {
-                        // Check if we were redirected from index.html
-                        const loginParam = new URLSearchParams(window.location.search).get('login');
-                        document.getElementById('loading').textContent = loginParam ? 
-                            'Please sign in to continue.' : 
-                            'Checking authentication...';
-                    }
+                    // No valid session, show appropriate message
+                    document.getElementById('loading').textContent = hasAuthParams ? 
+                        'Authentication failed. Please try again.' : 
+                        'Please sign in to continue.';
                     return;
                 }
 
@@ -248,16 +252,16 @@
                 const emailInput = document.getElementById('email');
                 emailInput.value = session.user.email;
 
-                // Check if the user has already completed their profile
+                // Check if profile is complete
                 if (session.user.user_metadata?.full_name && 
                     session.user.user_metadata?.phone && 
                     session.user.user_metadata?.address) {
-                    console.log('Profile already complete, redirecting to index');
+                    console.log('Profile complete, redirecting to index');
                     window.location.href = '/index.html';
                     return;
                 }
 
-                // Show the profile form if profile is incomplete
+                // Show profile form for incomplete profiles
                 console.log('Profile incomplete, showing form');
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('profileForm').style.display = 'block';

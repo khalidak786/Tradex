@@ -744,33 +744,28 @@
         try {
           console.log('Initializing app...');
           
-          // Check for active session first, before any other initialization
+          // Set up guest mode first - this should always be available
+          setupGuestMode();
+          
+          // Check for active session
           const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
           
           if (sessionError) {
             console.error('Session error:', sessionError);
-            await cleanupAuth();
-            return;
+            // Don't redirect, just show error and allow guest access
+            console.log('Continuing in guest mode due to session error');
           }
 
-          // If no session, redirect to login immediately
-          if (!session?.user) {
-            console.log('No active session found, redirecting to login');
-            window.location.href = '/login.html?login=true';
-            return;
-          }
-
-          // Set up guest mode first - this should always be available
-          setupGuestMode();
-          
-          // Set up event handlers only if we have a valid session
+          // Set up event handlers
           await setupEventHandlers();
 
           // Load initial products - allow guest access
           await fetchProducts(true);
           
-          // Set up polling for updates
-          setupPolling();
+          // Set up polling for updates if we have a session
+          if (session?.user) {
+            setupPolling();
+          }
           
         } catch (error) {
           console.error('Error in initializeApp:', error);
